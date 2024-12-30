@@ -1,0 +1,65 @@
+{
+    "treinamento": [
+        {
+            "pergunta": "quais os documentos que eu preciso pra dar entrada?",
+            "resposta": "RG, CPF, comprovante de residência, carteira de trabalho, holerite e certidão de nascimento, casamento ou divórcio."
+        },
+        {
+            "pergunta": "onde vocês estão localizados?",
+            "resposta": "Estamos localizados na Rua Padre Antonio, 365. Nosso e-mail é descomplicalares@gmail.com e em breve teremos um telefone disponível para contato."
+        },
+        {
+            "pergunta": "tem mais algo que eu tenho que saber antes de dar entrada em algum empreendimento?",
+            "resposta": "Não, as informações necessárias para dar entrada em um empreendimento são os documentos do comprador e do imóvel, além de seguir os procedimentos burocráticos exigidos. Caso tenha alguma dúvida específica, posso ajudá-lo a encontrar as informações necessárias."
+        },
+        {
+            "pergunta": "quero marcar uma reunião para entender melhor então",
+            "resposta": "Obrigado por entrar em contato conosco! Escolha o tipo de atendimento que mais te ajudaria ⤵"
+        },
+        {
+            "pergunta": "me conte um pouco sobre a descomplica lares",
+            "resposta": "A Descomplica Lares é uma imobiliária que atua no segmento econômico e tem como missão ser a maior rede de negócios imobiliários do país. Nossa visão é permitir que todos possam adquirir seu imóvel próprio com atenção e cuidado. Nossos valores são transparência, otimização, honestidade e segurança. Além disso, temos um atendimento humanizado e personalizado, buscando sempre entender as necessidades e preferências de cada cliente."
+        },
+        {
+            "pergunta": "quais documentos eu preciso ter pra comprar o imovel?",
+            "resposta": [
+                "Documento de Identificação - RG | CPF | CNH",
+                "Comprovante de Residência",
+                "Carteira de Trabalho",
+                "Holerite",
+                "Certidão de Nascimento, Casamento ou Divórcio"
+            ]
+        },
+        {
+            "pergunta": "quais locais vocês atendem?",
+            "resposta": "Atendemos Curitiba e região metropolitana. Temos imóveis disponíveis nos principais bairros, incluindo o Sítio Cercado, CIC e Capão Raso."
+        },
+        {
+            "pergunta": "posso financiar 100% do imóvel?",
+            "resposta": "Sim, através do programa Minha Casa Minha Vida, é possível financiar 100% do imóvel, dependendo de sua renda e situação cadastral."
+        },
+        {
+            "pergunta": "como funciona o financiamento pelo minha casa minha vida?",
+            "resposta": "O programa Minha Casa Minha Vida oferece financiamento com taxas de juros reduzidas e condições especiais para imóveis específicos aprovados pela Caixa Econômica. Dependendo da sua renda e situação familiar, você pode ter acesso a descontos e subsídios."
+        },
+        {
+            "pergunta": "imóveis usados entram no programa?",
+            "resposta": "Não, apenas imóveis novos de construtoras parceiras da Caixa estão elegíveis para o programa Minha Casa Minha Vida."
+        },
+        {
+            "pergunta": "quais são os documentos necessários para o financiamento?",
+            "resposta": [
+                "Documento de Identificação - RG | CPF | CNH",
+                "Comprovante de Residência",
+                "Carteira de Trabalho",
+                "Holerite",
+                "Certidão de Nascimento, Casamento ou Divórcio"
+            ]
+        },
+        {
+            "pergunta": "O endereço de vocês é o mesmo que no catálogo?",
+            "resposta": "Sim, nosso endereço é o mesmo do catálogo: Rua Padre Antonio, 365. Você pode entrar em contato conosco pelo e-mail descomplicalares@gmail.com. Posso ajudar em mais alguma coisa? 😊"
+        }
+
+    ]
+}
