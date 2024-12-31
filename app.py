@@ -1,5 +1,5 @@
 from flask import Flask, request
-from twilio.rest import Client
+from twilio.rest import Client 
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -34,9 +34,11 @@ api_key = os.getenv("API_KEY_OPENAI")
 lola_md = os.getenv("MARKDOWN_TRAINING")
 lola_json = os.getenv("JSON_TRAINING")
 
+csv_file = os.getenv("CSV_FILE")
+
 # Configuração do Langchain
 llm = ChatOpenAI(
-    model="gpt-4o",
+    model="gpt-4",
     max_tokens=150,
     temperature=0.2,            # Mantém respostas previsíveis
     top_p=0.7,                  # Foco em palavras mais prováveis
@@ -149,6 +151,62 @@ prompt_rubens = PromptTemplate(
 )
 intention_chain = LLMChain(llm=llm, prompt=prompt_rubens)
 
+# Prompt Fallback
+prompt_fallback = PromptTemplate(
+    input_variables=["message"],
+    template="""
+    Você é um assistente que identifica a intenção do cliente para um outro agente atuar.
+    Você acompanha toda a conversa. Sua única função é detectar intenções relacionadas a:
+    - Agradecimentos e finalização de conversa.
+    "Obrigado"
+    "Obrigada"
+    "Valeu"
+    "Gratidão"
+    "Muito obrigado"
+    "Muito obrigada"
+    "Agradecido"
+    "Agradecida"
+
+    "Tchau"
+    "Até mais"
+    "Até logo"
+    "Adeus"
+    "Ok"
+    "Beleza"
+    "Acabou"
+    "Já terminou?"
+
+    - Perguntas genéricas ou irrelevantes ao fluxo.
+    "O que você acha disso?"
+    "Você pode me ajudar com outra coisa?"
+    "Como está o tempo hoje?"
+    "Você é uma pessoa?"
+    "Quantos anos você tem?"
+
+    - Solicitações de suporte geral.
+    "Ajuda"
+    "Suporte"
+    "Tenho uma dúvida"
+    "Não sei o que fazer"
+    - Mensagens fora de contexto ou aleatória (Fora do escopo).
+    "Me diga uma piada"
+    "Só estou testando"
+
+    - Mensagens de frustração.
+    "Isso não está funcionando"
+    "Não entendi"
+    "Pode explicar melhor?"
+
+    Sempre que tiver uma interrogação (?) na {message}, dê uma olhada mais profunda.
+
+    Responda com "FALLBACK" se identificar alguma dessas intenções na mensagem.
+    Caso contrário, responda com "CONTINUE_FLOW".
+
+    Cliente: {message}
+    """
+)
+fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
+
 # Mapeamento dos IDs dos botões
 BUTTON_IDS = {
     "infos_descomplica": "informações",
@@ -172,7 +230,7 @@ def validar_horario(horario):
 
 # Função para salvar as respostas no CSV
 def salvar_no_csv(estado_cliente):
-    file_path = r"C:\Users\joaop\Documents\Descomplica (ORG)\Descomplica (ORG)\csv\costumers.csv"
+    file_path = csv_file
     headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
 
     data = {
@@ -250,17 +308,14 @@ def bot():
     print(f"Mensagem recebida: {incoming_msg}")
 
     if incoming_msg == "Desejo voltar!":
-        estado_cliente["etapa"] = "aguardando_opcao"
+        # Reinicia o estado do cliente
+        cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
+        
+        # Envia a mensagem de boas-vindas novamente
         client.messages.create(
             from_='whatsapp:+14155238886',
             to=from_whatsapp_number,
-            body="Voltando ao início! Por favor, escolha uma das opções novamente. 😊"
-        )
-        sleep(2)
-        client.messages.create(
-            from_='whatsapp:+14155238886',
-            to=from_whatsapp_number,
-            content_sid=template_eat
+            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lola*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
         return "OK", 200
 
@@ -348,6 +403,12 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
                     to=from_whatsapp_number,
                     body="Sua chamada já foi aberta! Já pode enviar os seus documentos que um corretor já entrará em contato para te auxiliar! 🧡💜"
                 )
+                sleep(2)
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    content_sid=template_loop
+                )
             elif incoming_msg == "marcar_reuniao":
                 estado_cliente["etapa"] = "questionario_reuniao_nome"
                 client.messages.create(
@@ -363,6 +424,19 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
                     body="Ótimo! Para agendar sua visita, precisamos de algumas informações! Vai levar só 3 minutinhos 😉\nPor favor, informe o seu *nome completo*."
                 )
             return "OK", 200
+    
+    questionario_etapas = {
+        "questionario_reuniao_nome", "questionario_reuniao_nome", 
+        "questionario_visita_idade", "questionario_reuniao_idade",
+        "questionario_visita_cpf", "questionario_reuniao_cpf",
+        "questionario_visita_carteira", "questionario_reuniao_carteira",
+        "questionario_visita_estado_civil", "questionario_reuniao_estado_civil",
+        "questionario_visita_trabalho", "questionario_reuniao_trabalho",
+        "questionario_visita_restricao", "questionario_reuniao_restricao",
+        "questionario_visita_filhos", "questionario_reuniao_filhos",
+        "questionario_visita_renda_bruta", "questionario_reuniao_renda_bruta",
+        "finalizado_tudo", "finalizado_visita", "aguardando_opcao"
+    }
             
     if estado_cliente["etapa"].startswith("questionario_visita"):
         if estado_cliente["etapa"] == "questionario_visita_nome":
@@ -504,7 +578,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
         client.messages.create(
         from_='whatsapp:+14155238886',
         to=from_whatsapp_number,
-        body="Horário agendado! ⌚\n*Um corretor entrará em contato para *confirmar* os detalhes!*"
+        body="Horário agendado! ⌚\n*Um corretor entrará em contato para confirmar os detalhes!*"
         )
         sleep(2.5)
         client.messages.create(
@@ -532,6 +606,12 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
 
         # Estado final
         estado_cliente["etapa"] = "encerrado"
+        sleep(2)
+        client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    content_sid=template_loop
+                )
         return "OK", 200
 
 
@@ -685,7 +765,32 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
         )
 
         estado_cliente["etapa"] = "finalizado_tudo"
+        sleep(2)
+
+        client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    content_sid=template_loop
+                )
     
+
+    if estado_cliente["etapa"] in questionario_etapas:
+        fallback_response = fallback_chain.run(message=incoming_msg).strip()
+        print(f"Intenção detectada: {fallback_response}")  # Log para debug
+        if fallback_response == "FALLBACK":
+            response_fallback = conversation_chain.run({
+                        "message": incoming_msg,
+                        "markdown_instrucoes": markdown_instrucoes,
+                        "configuracoes": configuracoes
+                    })
+            
+            client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=from_whatsapp_number,
+                body=response_fallback
+                )
+            return "OK", 200
+        return "OK", 200
     return "OK", 200
 
 
