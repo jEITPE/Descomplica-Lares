@@ -1,15 +1,15 @@
 from flask import Flask, request
-from twilio.rest import Client
+from twilio.rest import Client 
 from langchain.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
-from langchain.llms import OpenAI
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from google.auth.transport.requests import Request
 import markdown
-from twilio.http.http_client import TwilioHttpClient
 from bs4 import BeautifulSoup
+import datetime
 from time import sleep
+from apscheduler.schedulers.background import BackgroundScheduler
+import time
 import re
 import os
 import csv
@@ -22,8 +22,7 @@ load_dotenv()
 
 account_sid = os.getenv("ACCOUNT_SID")
 auth_token = os.getenv("AUTH_TOKEN")
-proxy_client = TwilioHttpClient(timeout=10)  # Define timeout de 10 segundos
-client = Client(account_sid, auth_token, http_client=proxy_client)
+client = Client(account_sid, auth_token)
 
 template_eat = os.getenv("CONTENT_ID_EAT")
 template_pe = os.getenv("CONTENT_ID_PE")
@@ -34,20 +33,21 @@ template_3anos = os.getenv("CONTENT_ID_3")
 template_autonomo_registrado = os.getenv("CONTENT_ID_AR")
 template_filhos = os.getenv("CONTENT_ID_FILHOS")
 
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("API_KEY_OPENAI")
 lola_md = os.getenv("MARKDOWN_TRAINING")
 lola_json = os.getenv("JSON_TRAINING")
 
+csv_file = os.getenv("CSV_FILE")
 
 # Configuração do Langchain
-llm = OpenAI(
-    temperature=0.4,            # Mantém respostas previsíveis
-    max_tokens=300,             # Respostas curtas e objetivas
+llm = ChatOpenAI(
+    model="gpt-4-turbo",
+    max_tokens=130,
+    temperature=0.2,            # Mantém respostas previsíveis
     top_p=0.7,                  # Foco em palavras mais prováveis
     frequency_penalty=0.5,      # Evita repetições
-    presence_penalty=0.0,       # Mantém previsibilidade
-    n=1,                        # Uma única resposta
-    stop=["\n", "Cliente:"]     # Para respostas após delimitador
+    presence_penalty=0.0,      # Mantém previsibilidade
+    openai_api_key=api_key
 )
 
 # Função para carregar e processar o arquivo Markdown
@@ -57,6 +57,7 @@ def carregar_markdown(markdown_path):
             html = markdown.markdown(f.read())
             soup = BeautifulSoup(html, 'html.parser')
             text = soup.get_text()
+            print(f"Markdown carregado com sucesso:\n{text}")  # Debug
             return text
     except Exception as e:
         print(f"Erro ao carregar o markdown: {e}")
@@ -79,7 +80,7 @@ configuracoes = carregar_json(lola_json)
 
 # Prompt para Lola
 prompt_lola = PromptTemplate(
-    input_variables=["message", "markdown_instrucoes", "configuracoes"],
+    input_variables=["message", "markdown_instrucoes", "configuracoes", "historico"],
     template="""
     Você é a Lola, assistente virtual da imobiliária Descomplica Lares. 
     Você tem uma abordagem simples e clara. Textos muito grande não agradam os seus clientes, então seja o mais direta possível.
@@ -89,8 +90,8 @@ prompt_lola = PromptTemplate(
     Sempre respostas curtas e diretas! Nunca responda algo que você não tem conhecimento, algo que você não foi treinada pra dizer,
     ou algo que não tenha nada haver com a Imobiliária em si!
 
-    - Se o cliente disser algo como "obrigado", "valeu", "entendi", "blz" ou "agradecido", responda com algo como "De nada! Se precisar de algo mais, estarei aqui. 😊". "Caso queira marcar uma visita ou uma reunião online, digite *atendimento*!"
-    - Se o cliente disser algo como "ok", "entendido" ou "finalizar", responda com algo como "Certo! Estarei por aqui caso precise. Até logo! 👋". "Caso queira marcar uma visita ou uma reunião online, digite *atendimento*!"
+    - Se o cliente disser algo como "obrigado", "valeu", "entendi", "blz" ou "agradecido", responda com algo como "De nada! Se precisar de algo mais, estarei aqui. 😊"
+    - Se o cliente disser algo como "ok", "entendido" ou "finalizar", responda com algo como "Certo! Estarei por aqui caso precise. Até logo! 👋"."
     - Nunca invente informações ou forneça respostas fora do escopo da imobiliária.
     - Seja educada e simpática, mas sempre clara e objetiva.
 
@@ -100,7 +101,7 @@ prompt_lola = PromptTemplate(
     1. "Quais os documentos que eu preciso para dar entrada?" (Responda com a lista de documentos necessária).
     2. "Onde vocês se localizam?" (Responda com o endereço fornecido).
     3. "Vocês trabalham com imóveis comerciais?" (Responda que a imobiliária trabalha apenas com residências).
-    4. "O endereço de vocês é o mesmo que está no catálogo?" (Responda algo como: "Sim, nosso endereço é o mesmo do catálogo: Rua Padre Antonio, 365.\nPosso ajudar em mais alguma coisa? 😊")
+    4. "O endereço de vocês é o mesmo que está no catálogo?" (Responda algo como: "Sim, nosso endereço é o mesmo do catálogo: Rua Padre Antonio, 365.")
 
     ### Restrições:
     - Nunca invente informações.
@@ -110,10 +111,17 @@ prompt_lola = PromptTemplate(
         - Marcar uma visita. "Acho melhor marcar uma visita para conhecer o local e os empreendimentos!" "Quero agendar uma visita" "Como posso marcar uma visita"
         - Querer comprar ou dar entrada algum apartamento ou empreendimento já. "Quero dar entrada/comprar em um apartamento"
 
-    Se perceber que o cliente está com as dúvidas sanadas, recomende-o a digitar apenas *atendimento*.:
-        "De nada! Se precisar de algo mais, estarei aqui. 😊 Caso queira marcar uma visita ou uma reunião online, digite atendimento!"
-
-    Ao final, pergunte se pode ajudar o cliente com mais alguma coisa.
+        
+    ### Histórico de mensagens:
+    1. Se o cliente perguntar algo já mencionado anteriormente, responda reforçando as informações do {historico}. 
+    2. Se o cliente fizer referência a uma pergunta anterior, revise o {historico} e, se aplicável, conecte a resposta com o que já foi discutido. 
+    3. Caso o cliente peça um resumo, gere um resumo curto com base no {historico} fornecido.
+    4. Sempre verifique se as instruções fornecidas no markdown têm prioridade sobre o {historico}, e só utilize o {historico} como suporte adicional. 
+    5. Nunca forneça informações que não estão nas instruções ou no {historico}.
+    6. Se o histórico tiver sido reiniciado, e o cliente voltar, ou algo desse tipo, responda com: "Desculpe, mas não tenho um histórico recente da nossa conversa. Posso te ajudar com alguma dúvida específica? 😊"
+    
+         
+    Use emojis, para dar o sentimento de simpatia!
 
     ### Instruções carregadas:
     {markdown_instrucoes}
@@ -123,6 +131,9 @@ prompt_lola = PromptTemplate(
 
     ### Mensagem do cliente:
     Cliente: {message}
+
+    ### Histórico de mensagens:
+    {historico}
 
     Responda as perguntas normalmente, sem 'Lola:'.
     """
@@ -138,7 +149,9 @@ prompt_rubens = PromptTemplate(
     - Marcar uma visita. "Acho melhor marcar uma visita para conhecer o local e os empreendimentos!" "Quero agendar uma visita" "Como posso marcar uma visita"
     - Querer saber como ser aprovado e o processo de aprovação do crédito e demais. 
     - Querer comprar ou dar entrada algum apartamento ou empreendimento. "Queria saber como dar entrada em um apartamento". 
+    - Análise de crédito, envio de documentos, documentos em mãos. Querer ver quanto de crédito tem na Caixa.
     - Se o cliente apenas digitar: "atendimento".
+
     Responda com "PASS_BUTTON" se identificar alguma dessas intenções na mensagem.
     Caso contrário, responda com "CONTINUE".
 
@@ -149,70 +162,126 @@ prompt_rubens = PromptTemplate(
     "O que é preciso para fazer uma simulação de financiamento?"
     "Como vocês trabalham?"
 
+    ### Mensagem do cliente:
     Cliente: {message}
     """
 )
 intention_chain = LLMChain(llm=llm, prompt=prompt_rubens)
 
-prompt_agendadora = PromptTemplate(
-    input_variables=["message", "dia", "horario"],
+# Prompt Fallback
+prompt_fallback = PromptTemplate(
+    input_variables=["message", "markdown_instrucoes", "configuracoes", "historico"],
     template="""
-    Você é a Agendadora, uma assistente especializada em agendamentos para a imobiliária Descomplica Lares.
+    Você é um assistente que identifica a intenção do cliente para um outro agente atuar.
+    Você acompanha toda a conversa. Sua única função é detectar intenções relacionadas a:
+    - Agradecimentos e finalização de conversa.
+    "Obrigado"
+    "Obrigada"
+    "Valeu"
+    "Gratidão"
+    "Muito obrigado"
+    "Muito obrigada"
+    "Agradecido"
+    "Agradecida"
 
-    Funções principais:
-    1. Informar horários disponíveis:
-       - Segunda a sábado: 09:00 às 20:00.
-       - Domingo: 09:00 às 12:00.
-    2. Garantir que os horários escolhidos devem terminar com *5 no final* (ex: 10:35, 11:15, 12:45).
-    3. Confirmar o horário informado pelo cliente, sem validar a disponibilidade (isso será tratado pelo corretor).  
-    4. Se o horário não for válido, peça educadamente para escolher um horário no formato correto.  
+    "Tchau"
+    "Até mais"
+    "Até logo"
+    "Adeus"
+    "Ok"
+    "Beleza"
+    "Acabou"
+    "Já terminou?"
 
-    Regras:
-    - Nunca invente horários ou detalhes não mencionados nas regras acima.
-    - Se o cliente tiver dúvidas, informe-o para digitar *atendimento* para falar com um corretor.  
-    - Registre o horário fornecido e confirme o agendamento, destacando que será revisado por um corretor.  
+    - Perguntas genéricas ou irrelevantes ao fluxo.
+    "O que você acha disso?"
+    "Você pode me ajudar com outra coisa?"
+    "Como está o tempo hoje?"
+    "Você é uma pessoa?"
+    "Quantos anos você tem?"
 
-    Exemplos:
-    - Cliente: "Quero marcar para segunda às 10:35."
-      Resposta: "Horário agendado para segunda às 10:35. 😊\nUm corretor entrará em contato para confirmar os detalhes!"  
-    - Cliente: "Posso marcar às 10:30?"
-      Resposta: "Ops! 😊 Os horários precisam terminar com *5 no final*. Exemplos: 10:35, 11:15. Por favor, escolha um horário válido."
+    - Solicitações de suporte geral.
+    "Ajuda"
+    "Suporte"
+    "Tenho uma dúvida"
+    "Não sei o que fazer"
+    - Mensagens fora de contexto ou aleatória (Fora do escopo).
+    "Me diga uma piada"
+    "Só estou testando"
 
+    - Mensagens de frustração.
+    "Isso não está funcionando"
+    "Não entendi"
+    "Pode explicar melhor?"
+
+    Sempre que tiver uma interrogação (?) na {message}, dê uma olhada mais profunda.
+
+    Responda com "FALLBACK" se identificar alguma dessas intenções na mensagem.
+    Caso contrário, responda com "CONTINUE_FLOW".
+
+    ### Instruções carregadas:
+    {markdown_instrucoes}
+
+    ### Exemplos de respostas para perguntas:
+    {configuracoes}
+
+    ### Mensagem do cliente:
     Cliente: {message}
-    Agendamento:
-    Dia: {dia}
-    Horário: {horario}
+
+    ### Histórico de mensagens
+    {historico}
     """
 )
-
-# Criação do LLMChain para a Agendadora
-agendamento_chain = LLMChain(llm=llm, prompt=prompt_agendadora)
+fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
 
 # Mapeamento dos IDs dos botões
 BUTTON_IDS = {
     "infos_descomplica": "informações",
     "marcar_reuniao": "marcar reunião",
-    "agendar_visita": "agendar visita"
+    "agendar_visita": "agendar visita",
+    "analise_credito": "análise de crédito"
 }
 
+# Inicializando o estado do cliente
 cliente_estado = {}
 
-# Função para criar reunião com Google Meet
-def marcar_reuniao(service, nome_cliente, descricao):
-    pass
+# Inicializando o Histórico da IA
+historico_clientes = {}
 
-def validar_horario(horario):
-    # Verifica apenas se o horário termina com '5'
-    return horario.strip()[-1] == "5"
+# Tempo limite para expiração do histórico
+TEMPO_EXPIRACAO = 1800
+
+# Agendador para verificar inatividade
+scheduler = BackgroundScheduler()
+
+# Função para verificar clientes inativos
+def verificar_inatividade():
+    tempo_atual = time.time()
+    for numero, dados in list(historico_clientes.items()):
+        if tempo_atual - dados["ultima_interacao"] > TEMPO_EXPIRACAO:
+            client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=numero,
+                body="Seu atendimento foi finalizado! 😪\nCaso queira retomar o contato, *basta enviar uma nova mensagem.*"
+            )
+            del historico_clientes[numero]
+
+# Inicia o agendador
+scheduler.add_job(verificar_inatividade, 'interval', seconds=1800)
+scheduler.start()
 
 def salvar_resposta(estado_cliente, campo, valor):
     if "respostas" not in estado_cliente:
         estado_cliente["respostas"] = {}
     estado_cliente["respostas"][campo] = valor
 
+def validar_horario(horario):
+    # Verifica apenas se o horário termina com '5'
+    return horario.strip()[-1] == "5"
+
 # Função para salvar as respostas no CSV
 def salvar_no_csv(estado_cliente):
-    file_path = r"C:\Users\joaop\Documents\Descomplica (ORG)\Descomplica (ORG)\csv\costumers.csv"
+    file_path = csv_file
     headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
 
     data = {
@@ -247,9 +316,6 @@ def validar_informacao(campo, valor):
     if campo == "nome":
         if len(valor.split()) < 2:
             return False, "O nome deve conter pelo menos dois nomes (nome e sobrenome)."
-    elif campo == "email":
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", valor):
-            return False, "O e-mail informado não é válido."
     elif campo == "cpf":
         if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", valor):
             return False, "O CPF deve estar no formato correto: XXX.XXX.XXX-XX."
@@ -279,12 +345,27 @@ def bot():
     incoming_msg = request.values.get('Body', '').strip()
     from_whatsapp_number = request.values.get('From')
 
+    tempo_atual = time.time()
+
+    # Controle de histórico
+    if from_whatsapp_number not in historico_clientes:
+        historico_clientes[from_whatsapp_number] = {
+            "historico": [],
+            "ultima_interacao": tempo_atual
+        }
+    else:
+        historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
+
+    # Histórico
+    historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+    historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
+
     if from_whatsapp_number not in cliente_estado:
         cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
         client.messages.create(
             from_='whatsapp:+14155238886',
             to=from_whatsapp_number,
-            body="Olá, Seja bem-vindo(a) 😊\nAqui é a *Lola*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
+            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
         return "OK", 200
 
@@ -293,23 +374,20 @@ def bot():
     print(f"Mensagem recebida: {incoming_msg}")
 
     if incoming_msg == "Desejo voltar!":
-        estado_cliente["etapa"] = "aguardando_opcao"
+        # Reinicia o estado do cliente
+        cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
+        
+        # Envia a mensagem de boas-vindas novamente
         client.messages.create(
             from_='whatsapp:+14155238886',
             to=from_whatsapp_number,
-            body="Voltando ao início! Por favor, escolha uma das opções novamente. 😊"
-        )
-        sleep(2)
-        client.messages.create(
-            from_='whatsapp:+14155238886',
-            to=from_whatsapp_number,
-            content_sid=template_eat
+            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
         return "OK", 200
 
     if estado_cliente["etapa"] == "inicial":
         intent_response = intention_chain.run(message=incoming_msg).strip()
-        print(f"Intenção detectada: {intent_response}")  # Log para debug
+        print(f"Intenção detectada: {intent_response}")
         if intent_response == "PASS_BUTTON":
             estado_cliente["etapa"] = "aguardando_opcao"
             client.messages.create(
@@ -321,6 +399,7 @@ def bot():
         elif intent_response == "CONTINUE":
             response = conversation_chain.run({
                 "message": incoming_msg,
+                "historico": historico,
                 "markdown_instrucoes": markdown_instrucoes,
                 "configuracoes": configuracoes
             })
@@ -328,6 +407,12 @@ def bot():
                 from_='whatsapp:+14155238886',
                 to=from_whatsapp_number,
                 body=response
+            )
+            sleep(1.5)
+            client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=from_whatsapp_number,
+                body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
             )
             return "OK", 200
 
@@ -352,21 +437,73 @@ def bot():
                     content_sid=template_loop
                 )
                 estado_cliente["etapa"] = "aguardando_opcao"
+            elif incoming_msg == "analise_credito":
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    body="Perfeito. Vamos te mandar algumas informações importantes para o envio de forma correta e os documentos necessários! 😎"
+                )
+                sleep(2)
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    body="""
+Gostaríamos de garantir que o processo é *totalmente seguro*. A Descomplica Lares respeita e segue todas as normas estabelecidas pela *Lei Geral de Proteção de Dados (LGPD), _Lei nº 13.709/2018_*, que assegura a proteção e a privacidade dos seus dados pessoais. 
+Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados de forma segura e confidencial, com total responsabilidade da nossa parte. 🔒
+"""
+                )
+                sleep(4)
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    content_sid=template_iap
+                )
+                sleep(2)
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    body="Esses são os documentos que serão necessários! E aqui vai uma sugestão 😊\n\nSe um dos arquivos de seus documentos for de um tamanho muito extenso, e não for possível enviar por aqui, *nos envie pelo e-mail: descomplicalares@gmail.com*. E deixe claro no e-mail a que documento você se refere!"
+                )
+                sleep(2)
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    body="Sua chamada já foi aberta! Já pode enviar os seus documentos que um corretor já entrará em contato para te auxiliar! 🧡💜"
+                )
+                sleep(2)
+                client.messages.create(
+                    from_='whatsapp:+14155238886',
+                    to=from_whatsapp_number,
+                    content_sid=template_loop
+                )
             elif incoming_msg == "marcar_reuniao":
                 estado_cliente["etapa"] = "questionario_reuniao_nome"
                 client.messages.create(
                     from_='whatsapp:+14155238886',
                     to=from_whatsapp_number,
-                    body="Ótimo! Para marcar sua reunião, precisamos de algumas informações! 😉\nPor favor, informe o seu *nome completo*."
+                    body="Ótimo! Para marcar sua reunião, precisamos de algumas informações. Vai levar só 3 minutinhos 😉\nPor favor, informe o seu *nome completo*."
                 )
             elif incoming_msg == "agendar_visita":
                 estado_cliente["etapa"] = "questionario_visita_nome"
                 client.messages.create(
                     from_='whatsapp:+14155238886',
                     to=from_whatsapp_number,
-                    body="Ótimo! Para agendar sua visita, precisamos de algumas informações! 😉\nPor favor, informe o seu *nome completo*."
+                    body="Ótimo! Para agendar sua visita, precisamos de algumas informações! Vai levar só 3 minutinhos 😉\nPor favor, informe o seu *nome completo*."
                 )
             return "OK", 200
+    
+    questionario_etapas = {
+        "questionario_reuniao_nome", "questionario_reuniao_nome", 
+        "questionario_visita_idade", "questionario_reuniao_idade",
+        "questionario_visita_cpf", "questionario_reuniao_cpf",
+        "questionario_visita_carteira", "questionario_reuniao_carteira",
+        "questionario_visita_estado_civil", "questionario_reuniao_estado_civil",
+        "questionario_visita_trabalho", "questionario_reuniao_trabalho",
+        "questionario_visita_restricao", "questionario_reuniao_restricao",
+        "questionario_visita_filhos", "questionario_reuniao_filhos",
+        "questionario_visita_renda_bruta", "questionario_reuniao_renda_bruta",
+        "finalizado_tudo", "finalizado_visita", "aguardando_opcao"
+    }
             
     if estado_cliente["etapa"].startswith("questionario_visita"):
         if estado_cliente["etapa"] == "questionario_visita_nome":
@@ -491,46 +628,58 @@ def bot():
                 )
                 return "OK", 200
             # Continua para o estado final se tudo estiver válido
-            estado_cliente["etapa"] = "finalizado_visita"
             salvar_no_csv(estado_cliente)
             client.messages.create(
                 from_='whatsapp:+14155238886',
                 to=from_whatsapp_number,
-                body="Obrigado pelas informações, a Descomplica agradece! 💚"
+                body="Obrigado pelas informações, a Descomplica agradece! 🧡💜"
+            )   
+            sleep(1.5)
+            client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=from_whatsapp_number,
+                body="Qual o melhor horário para você visitar? 😊 Os horários disponíveis são de _*Segunda a Sábado das 09:00 às 20:00 e Domingo das 09:00 às 12:00.*_ \nPor favor, escolha um horário terminando com *5 no final* _(Ex: 10:35, 11:15)_"
             )
-            sleep(2)
-        elif estado_cliente["etapa"] == "finalizado_visita":
-            estado_cliente["etapa"] = "aguardando_agendamento"
-            # Validação do horário
-            horario_cliente = estado_cliente["respostas"]["horario"]
-            if not validar_horario(horario_cliente):
-                client.messages.create(
+            estado_cliente["etapa"] = "finalizado_visita"
+    elif estado_cliente["etapa"] == "finalizado_visita":
+        client.messages.create(
+        from_='whatsapp:+14155238886',
+        to=from_whatsapp_number,
+        body="Horário agendado! ⌚\n*Um corretor entrará em contato para confirmar os detalhes!*"
+        )
+        sleep(2.5)
+        client.messages.create(
+        from_='whatsapp:+14155238886',
+        to=from_whatsapp_number,
+        body="""
+Estarei te passando uma lista de documentos que você pode trazer e uma confirmação de agendamento! 🏡\n
+*É muito importante seu comparecimento, terá um corretor e gerente aguardando você pra te ajudar no processo de financiamento com a _CAIXA ECONÔMICA FEDERAL_ e visualização do portfólio dos imóveis!*
+"""
+        ) 
+        sleep(3)
+
+        client.messages.create(
+            from_='whatsapp:+14155238886',
+            to=from_whatsapp_number,
+            content_sid=template_iap
+        )
+        sleep(3)
+
+        client.messages.create(
+            from_='whatsapp:+14155238886',
+            to=from_whatsapp_number,
+            content_sid=template_pe
+        )
+
+        # Estado final
+        estado_cliente["etapa"] = "encerrado"
+        sleep(2)
+        client.messages.create(
                     from_='whatsapp:+14155238886',
                     to=from_whatsapp_number,
-                    body="Ops! 😊 Os horários precisam terminar com *5 no final*. Exemplos: 10:35, 11:15, 12:45.\nPor favor, informe um horário válido."
+                    content_sid=template_loop
                 )
-                return "OK", 200
-
-            # Passa o controle para a IA Agendadora
-            response = agendamento_chain.run({
-                "message": incoming_msg,
-                "dia": estado_cliente["respostas"]["dia"],
-                "horario": horario_cliente
-            })
-
-            # Confirmação do agendamento
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body=response
-            )
-            sleep(3)
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                content_sid=template_loop
-            )
-            return "OK", 200
+        return "OK", 200
 
 
     if estado_cliente["etapa"].startswith("questionario_reuniao"):
@@ -623,7 +772,7 @@ def bot():
             client.messages.create(
                 from_='whatsapp:+14155238886',
                 to=from_whatsapp_number,
-                body="Você sabe se tem *restrição* no CPF?"
+                body="Você sabe se tem *restrição* no CPF? _(Ex: Dívidas, Erros cadastrais)_"
             )
 
         elif estado_cliente["etapa"] == "questionario_reuniao_restricao":
@@ -658,61 +807,80 @@ def bot():
                     body="Por favor, informe novamente a sua renda bruta."
                 )
                 return "OK", 200
+            
             salvar_resposta(estado_cliente, "renda_bruta", incoming_msg)
-            estado_cliente["etapa"] = "finalizado_reuniao"
             salvar_no_csv(estado_cliente)
             client.messages.create(
                 from_='whatsapp:+14155238886',
                 to=from_whatsapp_number,
-                body="Obrigado pelas informações, a Descomplica agradece! 💚"
+                body="Obrigado pelas informações, a Descomplica agradece! 🧡💜"
             )
             sleep(2)
-        elif estado_cliente["etapa"] == "finalizado_reuniao":
-            estado_cliente["etapa"] = "aguardando_agendamento_reuniao"
+            estado_cliente["etapa"] = "finalizado_reuniao"
+    if estado_cliente["etapa"] == "finalizado_reuniao":
+        client.messages.create(
+            from_='whatsapp:+14155238886',
+            to=from_whatsapp_number,
+            body="*Sua chamada já foi aberta, em breve um corretor entrará em contato para confirmar os detalhes dessa reunião! ✅*"
+            )
+        sleep(2)
 
-            # Validação do horário
-            horario_cliente = estado_cliente["respostas"]["horario"]
-            if not validar_horario(horario_cliente):
-                client.messages.create(
+        client.messages.create(
+        from_='whatsapp:+14155238886',
+        to=from_whatsapp_number,
+        body="*Antes temos alguns pontos importantes a salientar...*\n\n  • Reunião será _online_, como videochamada 🖥\n  • Você falará com um de nossos corretores, *já tenha alguns documentos em mãos, para possíveis verificações! 😎*"
+        )
+
+        estado_cliente["etapa"] = "finalizado_tudo"
+        sleep(2)
+
+        client.messages.create(
                     from_='whatsapp:+14155238886',
                     to=from_whatsapp_number,
-                    body="Ops! 😊 Os horários precisam terminar com *5 no final*. Exemplos: 10:35, 11:15, 12:45.\nPor favor, informe um horário válido."
+                    content_sid=template_loop
                 )
-                return "OK", 200
+    
 
-            # Passa o controle para a IA Agendadora
-            response = agendamento_chain.run({
-                "message": incoming_msg,
-                "dia": estado_cliente["respostas"]["dia"],
-                "horario": horario_cliente
-            })
+    if estado_cliente["etapa"] in questionario_etapas:
+        fallback_response = fallback_chain.run(message=incoming_msg).strip()
+        print(f"Intenção detectada: {fallback_response}")  # Log para debug
 
-            # Confirmação do agendamento
+        tempo_atual = time.time()
+
+        # Controle de histórico
+        if from_whatsapp_number not in historico_clientes:
+            historico_clientes[from_whatsapp_number] = {
+                "historico": [],
+                "ultima_interacao": tempo_atual
+            }
+        else:
+            historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
+
+        # Histórico
+        historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+        historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
+
+        if fallback_response == "FALLBACK":
+            response_fallback = conversation_chain.run({
+                        "message": incoming_msg,
+                        "historico": historico,
+                        "markdown_instrucoes": markdown_instrucoes,
+                        "configuracoes": configuracoes
+                    })
+            
             client.messages.create(
                 from_='whatsapp:+14155238886',
                 to=from_whatsapp_number,
-                body=response
-            )
-            sleep(2)
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                content_sid=template_loop
-            )
+                body=response_fallback
+                )
+            return "OK", 200
         return "OK", 200
-
-    '''# Fallback
-    client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body="Não entendi o que você quis dizer 😓\nSe estiver com alguma dificuldade digite *atendimento*"
-            )'''
     return "OK", 200
 
 
 @app.route('/')
 def index():
-    return "Funcionando!"
+    return "Funcionando 2024!"
 
 if __name__ == '__main__':
     app.run()
