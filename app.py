@@ -6,7 +6,10 @@ from langchain.chains import LLMChain
 from dotenv import load_dotenv
 import markdown
 from bs4 import BeautifulSoup
+import datetime
 from time import sleep
+from apscheduler.schedulers.background import BackgroundScheduler
+import time
 import re
 import os
 import csv
@@ -38,8 +41,8 @@ csv_file = os.getenv("CSV_FILE")
 
 # Configuração do Langchain
 llm = ChatOpenAI(
-    model="gpt-4",
-    max_tokens=150,
+    model="gpt-4-turbo",
+    max_tokens=130,
     temperature=0.2,            # Mantém respostas previsíveis
     top_p=0.7,                  # Foco em palavras mais prováveis
     frequency_penalty=0.5,      # Evita repetições
@@ -77,7 +80,7 @@ configuracoes = carregar_json(lola_json)
 
 # Prompt para Lola
 prompt_lola = PromptTemplate(
-    input_variables=["message", "markdown_instrucoes", "configuracoes"],
+    input_variables=["message", "markdown_instrucoes", "configuracoes", "historico"],
     template="""
     Você é a Lola, assistente virtual da imobiliária Descomplica Lares. 
     Você tem uma abordagem simples e clara. Textos muito grande não agradam os seus clientes, então seja o mais direta possível.
@@ -108,6 +111,16 @@ prompt_lola = PromptTemplate(
         - Marcar uma visita. "Acho melhor marcar uma visita para conhecer o local e os empreendimentos!" "Quero agendar uma visita" "Como posso marcar uma visita"
         - Querer comprar ou dar entrada algum apartamento ou empreendimento já. "Quero dar entrada/comprar em um apartamento"
 
+        
+    ### Histórico de mensagens:
+    1. Se o cliente perguntar algo já mencionado anteriormente, responda reforçando as informações do {historico}. 
+    2. Se o cliente fizer referência a uma pergunta anterior, revise o {historico} e, se aplicável, conecte a resposta com o que já foi discutido. 
+    3. Caso o cliente peça um resumo, gere um resumo curto com base no {historico} fornecido.
+    4. Sempre verifique se as instruções fornecidas no markdown têm prioridade sobre o {historico}, e só utilize o {historico} como suporte adicional. 
+    5. Nunca forneça informações que não estão nas instruções ou no {historico}.
+    6. Se o histórico tiver sido reiniciado, e o cliente voltar, ou algo desse tipo, responda com: "Desculpe, mas não tenho um histórico recente da nossa conversa. Posso te ajudar com alguma dúvida específica? 😊"
+    
+         
     Use emojis, para dar o sentimento de simpatia!
 
     ### Instruções carregadas:
@@ -118,6 +131,9 @@ prompt_lola = PromptTemplate(
 
     ### Mensagem do cliente:
     Cliente: {message}
+
+    ### Histórico de mensagens:
+    {historico}
 
     Responda as perguntas normalmente, sem 'Lola:'.
     """
@@ -146,6 +162,7 @@ prompt_rubens = PromptTemplate(
     "O que é preciso para fazer uma simulação de financiamento?"
     "Como vocês trabalham?"
 
+    ### Mensagem do cliente:
     Cliente: {message}
     """
 )
@@ -153,7 +170,7 @@ intention_chain = LLMChain(llm=llm, prompt=prompt_rubens)
 
 # Prompt Fallback
 prompt_fallback = PromptTemplate(
-    input_variables=["message"],
+    input_variables=["message", "markdown_instrucoes", "configuracoes", "historico"],
     template="""
     Você é um assistente que identifica a intenção do cliente para um outro agente atuar.
     Você acompanha toda a conversa. Sua única função é detectar intenções relacionadas a:
@@ -202,7 +219,17 @@ prompt_fallback = PromptTemplate(
     Responda com "FALLBACK" se identificar alguma dessas intenções na mensagem.
     Caso contrário, responda com "CONTINUE_FLOW".
 
+    ### Instruções carregadas:
+    {markdown_instrucoes}
+
+    ### Exemplos de respostas para perguntas:
+    {configuracoes}
+
+    ### Mensagem do cliente:
     Cliente: {message}
+
+    ### Histórico de mensagens
+    {historico}
     """
 )
 fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
@@ -215,9 +242,33 @@ BUTTON_IDS = {
     "analise_credito": "análise de crédito"
 }
 
+# Inicializando o estado do cliente
 cliente_estado = {}
 
-# Função para criar reunião com Google Meet
+# Inicializando o Histórico da IA
+historico_clientes = {}
+
+# Tempo limite para expiração do histórico
+TEMPO_EXPIRACAO = 1800
+
+# Agendador para verificar inatividade
+scheduler = BackgroundScheduler()
+
+# Função para verificar clientes inativos
+def verificar_inatividade():
+    tempo_atual = time.time()
+    for numero, dados in list(historico_clientes.items()):
+        if tempo_atual - dados["ultima_interacao"] > TEMPO_EXPIRACAO:
+            client.messages.create(
+                from_='whatsapp:+14155238886',
+                to=numero,
+                body="Seu atendimento foi finalizado! 😪\nCaso queira retomar o contato, *basta enviar uma nova mensagem.*"
+            )
+            del historico_clientes[numero]
+
+# Inicia o agendador
+scheduler.add_job(verificar_inatividade, 'interval', seconds=1800)
+scheduler.start()
 
 def salvar_resposta(estado_cliente, campo, valor):
     if "respostas" not in estado_cliente:
@@ -294,12 +345,27 @@ def bot():
     incoming_msg = request.values.get('Body', '').strip()
     from_whatsapp_number = request.values.get('From')
 
+    tempo_atual = time.time()
+
+    # Controle de histórico
+    if from_whatsapp_number not in historico_clientes:
+        historico_clientes[from_whatsapp_number] = {
+            "historico": [],
+            "ultima_interacao": tempo_atual
+        }
+    else:
+        historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
+
+    # Histórico
+    historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+    historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
+
     if from_whatsapp_number not in cliente_estado:
         cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
         client.messages.create(
             from_='whatsapp:+14155238886',
             to=from_whatsapp_number,
-            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lola*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
+            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
         return "OK", 200
 
@@ -315,7 +381,7 @@ def bot():
         client.messages.create(
             from_='whatsapp:+14155238886',
             to=from_whatsapp_number,
-            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lola*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
+            body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
         return "OK", 200
 
@@ -333,6 +399,7 @@ def bot():
         elif intent_response == "CONTINUE":
             response = conversation_chain.run({
                 "message": incoming_msg,
+                "historico": historico,
                 "markdown_instrucoes": markdown_instrucoes,
                 "configuracoes": configuracoes
             })
@@ -777,9 +844,26 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
     if estado_cliente["etapa"] in questionario_etapas:
         fallback_response = fallback_chain.run(message=incoming_msg).strip()
         print(f"Intenção detectada: {fallback_response}")  # Log para debug
+
+        tempo_atual = time.time()
+
+        # Controle de histórico
+        if from_whatsapp_number not in historico_clientes:
+            historico_clientes[from_whatsapp_number] = {
+                "historico": [],
+                "ultima_interacao": tempo_atual
+            }
+        else:
+            historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
+
+        # Histórico
+        historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+        historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
+
         if fallback_response == "FALLBACK":
             response_fallback = conversation_chain.run({
                         "message": incoming_msg,
+                        "historico": historico,
                         "markdown_instrucoes": markdown_instrucoes,
                         "configuracoes": configuracoes
                     })
