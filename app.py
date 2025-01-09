@@ -879,7 +879,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
 
 @app.route('/')
 def index():
-    return "Funcionando 2024!"
+    return "Funcionando 2025!"
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=5000)
