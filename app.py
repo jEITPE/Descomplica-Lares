@@ -27,7 +27,6 @@ client = Client(account_sid, auth_token)
 template_eat = os.getenv("CONTENT_ID_EAT")
 template_pe = os.getenv("CONTENT_ID_PE")
 template_iap = os.getenv("CONTENT_ID_IAP")
-template_av = os.getenv("CONTENT_ID_AV")
 template_loop = os.getenv("CONTENT_ID_LOOP")
 template_3anos = os.getenv("CONTENT_ID_3")
 template_autonomo_registrado = os.getenv("CONTENT_ID_AR")
@@ -260,7 +259,7 @@ def verificar_inatividade():
     for numero, dados in list(historico_clientes.items()):
         if tempo_atual - dados["ultima_interacao"] > TEMPO_EXPIRACAO:
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=numero,
                 body="Seu atendimento foi finalizado! 😪\nCaso queira retomar o contato, *basta enviar uma nova mensagem.*"
             )
@@ -363,7 +362,7 @@ def bot():
     if from_whatsapp_number not in cliente_estado:
         cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
         client.messages.create(
-            from_='whatsapp:+14155238886',
+            from_='whatsapp:+5541987526657',
             to=from_whatsapp_number,
             body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
@@ -379,7 +378,7 @@ def bot():
         
         # Envia a mensagem de boas-vindas novamente
         client.messages.create(
-            from_='whatsapp:+14155238886',
+            from_='whatsapp:+5541987526657',
             to=from_whatsapp_number,
             body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
         )
@@ -391,7 +390,7 @@ def bot():
         if intent_response == "PASS_BUTTON":
             estado_cliente["etapa"] = "aguardando_opcao"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_eat
             )
@@ -404,13 +403,13 @@ def bot():
                 "configuracoes": configuracoes
             })
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body=response
             )
             sleep(1.5)
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
             )
@@ -420,32 +419,32 @@ def bot():
         if incoming_msg in BUTTON_IDS:
             if incoming_msg == "infos_descomplica":
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_iap
                 )
                 sleep(1)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_pe
                 )
                 sleep(3)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_loop
                 )
                 estado_cliente["etapa"] = "aguardando_opcao"
             elif incoming_msg == "analise_credito":
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Perfeito. Vamos te mandar algumas informações importantes para o envio de forma correta e os documentos necessários! 😎"
                 )
                 sleep(2)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="""
 Gostaríamos de garantir que o processo é *totalmente seguro*. A Descomplica Lares respeita e segue todas as normas estabelecidas pela *Lei Geral de Proteção de Dados (LGPD), _Lei nº 13.709/2018_*, que assegura a proteção e a privacidade dos seus dados pessoais. 
@@ -454,39 +453,39 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
                 )
                 sleep(4)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_iap
                 )
                 sleep(2)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Esses são os documentos que serão necessários! E aqui vai uma sugestão 😊\n\nSe um dos arquivos de seus documentos for de um tamanho muito extenso, e não for possível enviar por aqui, *nos envie pelo e-mail: descomplicalares@gmail.com*. E deixe claro no e-mail a que documento você se refere!"
                 )
                 sleep(2)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Sua chamada já foi aberta! Já pode enviar os seus documentos que um corretor já entrará em contato para te auxiliar! 🧡💜"
                 )
                 sleep(2)
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_loop
                 )
             elif incoming_msg == "marcar_reuniao":
                 estado_cliente["etapa"] = "questionario_reuniao_nome"
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Ótimo! Para marcar sua reunião, precisamos de algumas informações. Vai levar só 3 minutinhos 😉\nPor favor, informe o seu *nome completo*."
                 )
             elif incoming_msg == "agendar_visita":
                 estado_cliente["etapa"] = "questionario_visita_nome"
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Ótimo! Para agendar sua visita, precisamos de algumas informações! Vai levar só 3 minutinhos 😉\nPor favor, informe o seu *nome completo*."
                 )
@@ -510,12 +509,12 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             valido, erro = validar_informacao("nome", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente o seu nome completo."
                 )
@@ -523,7 +522,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "nome", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_idade"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Quantos *anos* você tem? _(Ex: *35*)_"
             )
@@ -531,12 +530,12 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             valido, erro = validar_informacao("idade", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente a sua idade."
                 )
@@ -544,7 +543,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "idade", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_cpf"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Qual é o seu *CPF*? _(XXX.XXX.XXX-XX)_"
             )
@@ -552,12 +551,12 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             valido, erro = validar_informacao("cpf", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente o seu CPF."
                 )
@@ -565,7 +564,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "cpf", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_carteira"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_3anos
             )
@@ -573,7 +572,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "carteira_assinada", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_estado_civil"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Qual é o seu *estado civil*?"
             )
@@ -581,7 +580,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "estado_civil", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_trabalho"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_autonomo_registrado
             )
@@ -589,7 +588,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "trabalho", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_restricao"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Você sabe se tem *restrição* no CPF? _(Ex: Dívidas, Erros cadastrais)_"
             )
@@ -597,7 +596,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "restricao_cpf", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_filhos"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_filhos
             )
@@ -605,7 +604,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             salvar_resposta(estado_cliente, "filhos_menores", incoming_msg)
             estado_cliente["etapa"] = "questionario_visita_renda_bruta"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body=f"{estado_cliente['respostas'].get('nome', 'Cliente').title()}, diga-nos a sua *Renda Bruta Mensal* 💸 _(Ex: 4500,00)_"
             )
@@ -617,12 +616,12 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             if not validacao:
                 for erro in resultado:
                     client.messages.create(
-                        from_='whatsapp:+14155238886',
+                        from_='whatsapp:+5541987526657',
                         to=from_whatsapp_number,
                         body=f"Erro no campo '{erro['campo']}': {erro['erro']}"
                     )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, corrija os campos acima antes de continuar."
                 )
@@ -630,26 +629,26 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
             # Continua para o estado final se tudo estiver válido
             salvar_no_csv(estado_cliente)
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Obrigado pelas informações, a Descomplica agradece! 🧡💜"
             )   
             sleep(1.5)
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Qual o melhor horário para você visitar? 😊 Os horários disponíveis são de _*Segunda a Sábado das 09:00 às 20:00 e Domingo das 09:00 às 12:00.*_ \nPor favor, escolha um horário terminando com *5 no final* _(Ex: 10:35, 11:15)_"
             )
             estado_cliente["etapa"] = "finalizado_visita"
     elif estado_cliente["etapa"] == "finalizado_visita":
         client.messages.create(
-        from_='whatsapp:+14155238886',
+        from_='whatsapp:+5541987526657',
         to=from_whatsapp_number,
         body="Horário agendado! ⌚\n*Um corretor entrará em contato para confirmar os detalhes!*"
         )
         sleep(2.5)
         client.messages.create(
-        from_='whatsapp:+14155238886',
+        from_='whatsapp:+5541987526657',
         to=from_whatsapp_number,
         body="""
 Estarei te passando uma lista de documentos que você pode trazer e uma confirmação de agendamento! 🏡\n
@@ -659,14 +658,14 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
         sleep(3)
 
         client.messages.create(
-            from_='whatsapp:+14155238886',
+            from_='whatsapp:+5541987526657',
             to=from_whatsapp_number,
             content_sid=template_iap
         )
         sleep(3)
 
         client.messages.create(
-            from_='whatsapp:+14155238886',
+            from_='whatsapp:+5541987526657',
             to=from_whatsapp_number,
             content_sid=template_pe
         )
@@ -675,7 +674,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
         estado_cliente["etapa"] = "encerrado"
         sleep(2)
         client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_loop
                 )
@@ -687,12 +686,12 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             valido, erro = validar_informacao("nome", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente o seu nome completo."
                 )
@@ -700,7 +699,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "nome", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_idade"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Quantos *anos* você tem? _(Ex: *35*)_"
             )
@@ -708,12 +707,12 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             valido, erro = validar_informacao("idade", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(     
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente a sua idade."
                 )
@@ -721,7 +720,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "idade", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_cpf"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Qual é o seu *CPF*? _(XXX.XXX.XXX-XX)_"
             )
@@ -730,12 +729,12 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             valido, erro = validar_informacao("cpf", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente o seu CPF no formato XXX.XXX.XXX-XX."
                 )
@@ -743,7 +742,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "cpf", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_carteira"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_3anos
             )
@@ -752,7 +751,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "carteira_assinada", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_estado_civil"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Qual é o seu *estado civil*?"
             )
@@ -761,7 +760,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "estado_civil", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_trabalho"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_autonomo_registrado
             )
@@ -770,7 +769,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "trabalho", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_restricao"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Você sabe se tem *restrição* no CPF? _(Ex: Dívidas, Erros cadastrais)_"
             )
@@ -779,7 +778,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "restricao_cpf", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_filhos"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 content_sid=template_filhos
             )
@@ -788,7 +787,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "filhos_menores", incoming_msg)
             estado_cliente["etapa"] = "questionario_reuniao_renda_bruta"
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body=f"{estado_cliente['respostas'].get('nome', 'Cliente').title()}, diga-nos a sua *Renda Bruta Mensal* 💸 _(Ex: 4500,00)_"
             )
@@ -797,12 +796,12 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             valido, erro = validar_informacao("renda_bruta", incoming_msg)
             if not valido:
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body=erro
                 )
                 client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     body="Por favor, informe novamente a sua renda bruta."
                 )
@@ -811,7 +810,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             salvar_resposta(estado_cliente, "renda_bruta", incoming_msg)
             salvar_no_csv(estado_cliente)
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body="Obrigado pelas informações, a Descomplica agradece! 🧡💜"
             )
@@ -819,14 +818,14 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
             estado_cliente["etapa"] = "finalizado_reuniao"
     if estado_cliente["etapa"] == "finalizado_reuniao":
         client.messages.create(
-            from_='whatsapp:+14155238886',
+            from_='whatsapp:+5541987526657',
             to=from_whatsapp_number,
             body="*Sua chamada já foi aberta, em breve um corretor entrará em contato para confirmar os detalhes dessa reunião! ✅*"
             )
         sleep(2)
 
         client.messages.create(
-        from_='whatsapp:+14155238886',
+        from_='whatsapp:+5541987526657',
         to=from_whatsapp_number,
         body="*Antes temos alguns pontos importantes a salientar...*\n\n  • Reunião será _online_, como videochamada 🖥\n  • Você falará com um de nossos corretores, *já tenha alguns documentos em mãos, para possíveis verificações! 😎*"
         )
@@ -835,7 +834,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
         sleep(2)
 
         client.messages.create(
-                    from_='whatsapp:+14155238886',
+                    from_='whatsapp:+5541987526657',
                     to=from_whatsapp_number,
                     content_sid=template_loop
                 )
@@ -869,7 +868,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
                     })
             
             client.messages.create(
-                from_='whatsapp:+14155238886',
+                from_='whatsapp:+5541987526657',
                 to=from_whatsapp_number,
                 body=response_fallback
                 )
