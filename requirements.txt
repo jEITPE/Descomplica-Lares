@@ -1,6 +1,7 @@
 Flask
 twilio
 langchain
+langchain_community
 openai
 python-dotenv
 markdown
