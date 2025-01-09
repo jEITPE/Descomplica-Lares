@@ -1,4 +1,8 @@
+Flask
+twilio
 langchain
-langchain_community
 openai
-chromadb
+python-dotenv
+markdown
+beautifulsoup4
+apscheduler
