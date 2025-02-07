@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descomplica Lares - Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Descomplica Lares</h2>
+            <p>Painel Administrativo</p>
+        </div>
+        <div class="chat-list" id="chatList">
+            <!-- Chat items serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="chat-header">
+            <img src="{{ url_for('static', filename='img/default-avatar.png') }}" alt="Avatar" id="currentChatAvatar">
+            <div class="chat-info">
+                <div class="chat-name" id="currentChatName">Selecione um chat</div>
+                <div class="chat-status">
+                    <span id="chatStatus">Nenhum chat selecionado</span>
+                    <span class="status-indicator" id="statusIndicator"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <!-- Mensagens serão inseridas aqui via JavaScript -->
+        </div>
+
+        <div class="flow-control">
+            <button id="toggleFlow" style="display: none;">
+                <i class="fas fa-play"></i> Continuar Fluxo
+            </button>
+        </div>
+
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Digite uma mensagem..." disabled>
+            <button id="sendMessage" disabled>
+                <i class="fas fa-paper-plane"></i> Enviar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const currentPhone = {
+            number: null,
+            flowPaused: false
+        };
+
+        function updateChatList(chats) {
+            const chatList = document.getElementById('chatList');
+            chatList.innerHTML = '';
+            
+            chats.forEach(chat => {
+                const chatItem = document.createElement('div');
+                chatItem.className = 'chat-item';
+                chatItem.setAttribute('data-phone', chat.phone);
+                
+                // Usar sempre o avatar padrão
+                const img = document.createElement('img');
+                img.className = 'chat-avatar';
+                img.src = '{{ url_for("static", filename="img/default-avatar.png") }}';
+                img.alt = 'Avatar';
+                
+                const chatInfo = document.createElement('div');
+                chatInfo.className = 'chat-info';
+                chatInfo.innerHTML = `
+                    <div class="chat-name">${chat.phone}</div>
+                    <div class="chat-preview">${chat.lastMessage || 'Nenhuma mensagem'}</div>
+                `;
+                
+                chatItem.appendChild(img);
+                chatItem.appendChild(chatInfo);
+                chatItem.onclick = () => selectChat(chat.phone);
+                
+                chatList.appendChild(chatItem);
+            });
+        }
+
+        function updateMessages(messages) {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.type}`;
+                
+                messageDiv.innerHTML = `
+                    <div class="message-content">${msg.content}</div>
+                    <div class="message-time">${msg.timestamp}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+            });
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function selectChat(phone) {
+            currentPhone.number = phone;
+            document.getElementById('currentChatName').textContent = phone;
+            document.getElementById('chatStatus').textContent = 'Chat ativo';
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendMessage').disabled = false;
+            
+            // Atualizar status do fluxo
+            fetch(`/api/chat-status/${phone}`)
+                .then(response => response.json())
+                .then(data => {
+                    currentPhone.flowPaused = data.flowPaused;
+                    updateFlowButton();
+                });
+            
+            // Carregar mensagens
+            loadMessages(phone);
+            
+            // Atualizar visual da lista de chats
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+                if(item.getAttribute('data-phone') === phone) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        function loadMessages(phone) {
+            fetch(`/api/messages/${phone}`)
+                .then(response => response.json())
+                .then(data => updateMessages(data.messages));
+        }
+
+        function updateFlowButton() {
+            const button = document.getElementById('toggleFlow');
+            button.style.display = currentPhone.number ? 'inline-block' : 'none';
+            
+            if(currentPhone.flowPaused) {
+                button.innerHTML = '<i class="fas fa-play"></i> Continuar Fluxo';
+                document.getElementById('statusIndicator').className = 'status-indicator status-paused';
+            } else {
+                button.innerHTML = '<i class="fas fa-pause"></i> Pausar Fluxo';
+                document.getElementById('statusIndicator').className = 'status-indicator status-active';
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('toggleFlow').onclick = () => {
+            if(!currentPhone.number) return;
+            
+            fetch(`/api/toggle-flow/${currentPhone.number}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                currentPhone.flowPaused = data.flowPaused;
+                updateFlowButton();
+            });
+        };
+
+        document.getElementById('sendMessage').onclick = () => {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if(!message || !currentPhone.number) return;
+            
+            fetch('/api/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    phone: currentPhone.number,
+                    message: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    input.value = '';
+                    loadMessages(currentPhone.number);
+                }
+            });
+        };
+
+        document.getElementById('messageInput').onkeypress = (e) => {
+            if(e.key === 'Enter') {
+                document.getElementById('sendMessage').click();
+            }
+        };
+
+        // Polling para atualizações
+        function pollUpdates() {
+            fetch('/api/updates')
+                .then(response => response.json())
+                .then(data => {
+                    updateChatList(data.chats);
+                    if(currentPhone.number) {
+                        loadMessages(currentPhone.number);
+                    }
+                });
+        }
+
+        // Iniciar polling
+        setInterval(pollUpdates, 5000);
+        pollUpdates(); // Primeira chamada imediata
+    </script>
+</body>
+</html>
