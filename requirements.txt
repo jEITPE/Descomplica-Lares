@@ -7,3 +7,4 @@ python-dotenv
 markdown
 beautifulsoup4
 apscheduler
+gunicorn
