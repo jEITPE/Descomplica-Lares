@@ -1,4 +1,12 @@
-from flask import Flask, request
+import os
+import csv
+import logging
+import pandas as pd
+import plotly.graph_objects as go
+from flask import Flask, render_template, jsonify, request
+from openai import OpenAI
+from dotenv import load_dotenv
+from flask import Flask, request, redirect, url_for
 from twilio.rest import Client 
 from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
@@ -16,6 +24,22 @@ import json
 import logging
 from questionnaire_ai import QuestionnaireAI
 import random
+import pandas as pd
+import plotly
+import plotly.express as px
+import plotly.graph_objects as go
+import json
+from openai import OpenAI
+from flask import render_template
+
+# Configuração de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Carregar variáveis de ambiente
+load_dotenv()
+
+app = Flask(__name__)
 
 # Configuração do logger
 logging.basicConfig(
@@ -27,11 +51,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-
-# Carrega as variáveis de ambiente
-load_dotenv()
 
 account_sid = os.getenv("ACCOUNT_SID")
 auth_token = os.getenv("AUTH_TOKEN")
@@ -58,9 +77,6 @@ llm = ChatOpenAI(
     model="gpt-3.5-turbo",     # Modelo GPT-3.5-turbo
     max_tokens=130,
     temperature=0.2,            # Mantém respostas previsíveis
-    top_p=0.7,                  # Foco em palavras mais prováveis
-    frequency_penalty=0.5,      # Evita repetições
-    presence_penalty=0.0,      # Mantém previsibilidade
     openai_api_key=api_key
 )
 
@@ -295,7 +311,8 @@ def validar_horario(horario):
 # Função para salvar as respostas no CSV
 def salvar_no_csv(estado_cliente):
     file_path = csv_file
-    headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
+    headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", 
+             "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
 
     data = {
         "nome": estado_cliente["respostas"].get("nome", ""),
@@ -502,401 +519,281 @@ def process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field
     
     return "OK", 200
 
-@app.route('/bot', methods=['POST'])
-def bot():
+def load_data():
     try:
-        # Verificar se é um arquivo ou áudio
-        if 'MediaContentType0' in request.values:
-            media_type = request.values.get('MediaContentType0', '')
-            from_whatsapp_number = request.values.get('From', '')
-            
-            # Se for um áudio, enviar mensagem informando que não suporta
-            if media_type.startswith('audio/'):
-                try:
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body="Desculpe, não consigo processar mensagens de áudio. Por favor, envie sua mensagem em texto."
-                    )
-                except Exception as e:
-                    logger.error(f"Erro ao enviar mensagem sobre áudio: {str(e)}")
-            
-            # Para qualquer tipo de mídia, continuamos o fluxo normal
-            # mas não processamos o conteúdo da mídia
-
-        # Continua com o fluxo normal
-        from_whatsapp_number = request.values.get('From')
-        if from_whatsapp_number not in conversation_contexts:
-            conversation_contexts[from_whatsapp_number] = ConversationContext()
+        logger.info("Iniciando carregamento de dados")
+        file_path = os.path.join('data', 'treinamento_ia', 'csv', 'costumers.csv')
         
-        context = conversation_contexts[from_whatsapp_number]
-        incoming_msg = request.values.get('Body', '').strip()
-        if not incoming_msg:
-            logger.info('Mensagem vazia recebida; retornando OK sem processamento adicional.')
-            return "OK", 200
+        # Definir os nomes das colunas
+        column_names = ['Nome', 'Idade', 'CPF', 'Experiência > 3 anos', 'Estado Civil', 
+                       'Tipo de Trabalho', 'Motivo', 'Filhos Menores', 'Renda Mensal', 
+                       'Unnamed1', 'Unnamed2']
         
-        tempo_atual = time.time()
-
-        # Controle de histórico
-        if from_whatsapp_number not in historico_clientes:
-            historico_clientes[from_whatsapp_number] = {
-                "historico": [],
-                "ultima_interacao": tempo_atual
-            }
-        else:
-            historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
-
-        # Histórico
-        historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
-        historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
-
-        if from_whatsapp_number not in cliente_estado:
-            cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
-            try:
-                logger.info(f"Enviando mensagem de boas-vindas para {from_whatsapp_number}")
-                message = client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
-                )
-                logger.info(f"Mensagem enviada com sucesso. SID: {message.sid}")
-            except Exception as e:
-                logger.error(f"Erro ao enviar mensagem: {str(e)}")
-            return "OK", 200
-
-        estado_cliente = cliente_estado[from_whatsapp_number]
-
-        logger.info(f"Mensagem recebida de {from_whatsapp_number}: {incoming_msg}")
-        logger.info(f"Estado atual: {estado_cliente['etapa']}")
-        logger.debug(f"Contexto completo: {conversation_contexts[from_whatsapp_number].context}")
-
-        if incoming_msg == "Desejo voltar!":
-            # Reinicia o estado do cliente
-            cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
-            
-            # Envia a mensagem de boas-vindas novamente
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
-            )
-            return "OK", 200
-
-        if estado_cliente["etapa"] == "inicial":
-            intent_response = intention_chain.run(message=incoming_msg).strip()
-            logger.info(f"Intenção detectada: {intent_response}")
-            if intent_response == "PASS_BUTTON":
-                estado_cliente["etapa"] = "aguardando_opcao"
-                client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    content_sid=template_eat
-                )
-                return "OK", 200
-            elif intent_response == "CONTINUE":
-                response = conversation_chain.run({
-                    "message": incoming_msg,
-                    "historico": historico,
-                    "markdown_instrucoes": markdown_instrucoes,
-                    "configuracoes": configuracoes
-                })
-                client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    body=response
-                )
-                sleep(1.5)
-                client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
-                )
-                return "OK", 200
-
-        if estado_cliente["etapa"] == "aguardando_opcao":
-            if incoming_msg in BUTTON_IDS:
-                if incoming_msg == "infos_descomplica":
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        content_sid=template_iap
-                    )
-                    sleep(1)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        content_sid=template_pe
-                    )
-                    sleep(3)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        content_sid=template_loop
-                    )
-                    estado_cliente["etapa"] = "aguardando_opcao"
-                elif incoming_msg == "analise_credito":
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body="Perfeito. Vamos te mandar algumas informações importantes para o envio de forma correta e os documentos necessários! 😎"
-                    )
-                    sleep(2)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body="""
-Gostaríamos de garantir que o processo é *totalmente seguro*. A Descomplica Lares respeita e segue todas as normas estabelecidas pela *Lei Geral de Proteção de Dados (LGPD), _Lei nº 13.709/2018_*, que assegura a proteção e a privacidade dos seus dados pessoais. 
-Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados de forma segura e confidencial, com total responsabilidade da nossa parte. 🔒
-"""
-                    )
-                    sleep(4)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        content_sid=template_iap
-                    )
-                    sleep(2)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body="Esses são os documentos que serão necessários! E aqui vai uma sugestão 😊\n\nSe um dos arquivos de seus documentos for de um tamanho muito extenso, e não for possível enviar por aqui, *nos envie pelo e-mail: descomplicalares@gmail.com*. E deixe claro no e-mail a que documento você se refere!"
-                    )
-                    sleep(2)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body="Sua chamada já foi aberta! Já pode enviar os seus documentos que um corretor já entrará em contato para te auxiliar! 🧡💜"
-                    )
-                    sleep(2)
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        content_sid=template_loop
-                    )
-                elif incoming_msg == "marcar_reuniao":
-                    # Pega a primeira pergunta do questionário
-                    first_question = questionnaire.get_first_question("reuniao")
-                    if first_question.get("template_id"):
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            content_sid=globals()[first_question["template_id"]]
-                        )
-                    else:
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            body=f"Ótimo! Para marcar sua reunião, precisamos de algumas informações. Vai levar só 3 minutinhos 😉\n{first_question['question']}"
-                        )
-                    estado_cliente["etapa"] = f"questionario_reuniao_{first_question['field']}"
-                elif incoming_msg == "agendar_visita":
-                    # Pega a primeira pergunta do questionário
-                    first_question = questionnaire.get_first_question("visita")
-                    if first_question.get("template_id"):
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            content_sid=globals()[first_question["template_id"]]
-                        )
-                    else:
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            body=f"Ótimo! Para agendar sua visita, precisamos de algumas informações! Vai levar só 3 minutinhos 😉\n{first_question['question']}"
-                        )
-                    estado_cliente["etapa"] = f"questionario_visita_{first_question['field']}"
-    
-            # Retorno padrão para o caso de nenhum dos if acima ser acionado
-            return "OK", 200
-    
-        if estado_cliente["etapa"].startswith("questionario_reuniao"):
-            current_field = estado_cliente["etapa"].replace("questionario_reuniao_", "")
-            return process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field, historico, "reuniao")
-        elif estado_cliente["etapa"].startswith("questionario_visita"):
-            current_field = estado_cliente["etapa"].replace("questionario_visita_", "")
-            return process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field, historico, "visita")
-        elif estado_cliente["etapa"] == "finalizado_reuniao":
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body="*Sua chamada já foi aberta, em breve um corretor entrará em contato para confirmar os detalhes dessa reunião! ✅*"
-            )
-            sleep(2)
-
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body="*Antes temos alguns pontos importantes a salientar...*\n\n  • Reunião será _online_, como videochamada 🖥\n  • Você falará com um de nossos corretores, *já tenha alguns documentos em mãos, para possíveis verificações! 😎*"
-            )
-
-            estado_cliente["etapa"] = "finalizado_tudo"
-            sleep(2)
-
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                content_sid=template_loop
-            )
-            return "OK", 200
-        elif estado_cliente["etapa"] == "finalizado_visita":
-            # Primeiro pergunta o dia se ainda não foi perguntado
-            if "dia" not in questionario_respostas.get(from_whatsapp_number, {}):
-                if estado_cliente.get("aguardando_dia", False):
-                    # Processa a resposta do dia
-                    result = questionnaire.process_message(incoming_msg, "dia", historico)
-                    
-                    if result["type"] == "error":
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            body=result["message"]
-                        )
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            body=questionnaire.questions["dia"]["pergunta"]
-                        )
-                        return "OK", 200
-                    
-                    # Salva o dia e continua para o horário
-                    if from_whatsapp_number not in questionario_respostas:
-                        questionario_respostas[from_whatsapp_number] = {}
-                    questionario_respostas[from_whatsapp_number]["dia"] = result["value"]
-                    estado_cliente["aguardando_dia"] = False
-                    
-                    # Pergunta o horário
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body=questionnaire.questions["horario"]["pergunta"]
-                    )
-                    return "OK", 200
-                else:
-                    # Primeira vez perguntando o dia
-                    estado_cliente["aguardando_dia"] = True
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body=questionnaire.questions["dia"]["pergunta"]
-                    )
-                    return "OK", 200
+        try:
+            df = pd.read_csv(file_path, encoding='latin1', names=column_names, header=None)
+        except:
+            df = pd.read_csv(file_path, encoding='utf-8', names=column_names, header=None)
         
-            # Se já tem o dia, processa o horário
-            result = questionnaire.process_message(incoming_msg, "horario", historico)
-            
-            if result["type"] == "error":
-                client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    body=result["message"]
-                )
-                client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    body=questionnaire.questions["horario"]["pergunta"]
-                )
-                return "OK", 200
-                
-            # Salva o horário e continua
-            if from_whatsapp_number in questionario_respostas:
-                questionario_respostas[from_whatsapp_number]["horario"] = result["value"]
-                questionnaire.save_to_csv(questionario_respostas[from_whatsapp_number])
-
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body=f"Visita agendada para o dia {questionario_respostas[from_whatsapp_number]['dia']} às {result['value']}! ⌚\n*Um corretor entrará em contato para confirmar os detalhes!*"
-            )
-            sleep(2.5)
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                body="""
-Estarei te passando uma lista de documentos que você pode trazer e uma confirmação de agendamento! 🏡\n
-*É muito importante seu comparecimento, terá um corretor e gerente aguardando você pra te ajudar no processo de financiamento com a _CAIXA ECONÔMICA FEDERAL_ e visualização do portfólio dos imóveis!*
-"""
-            ) 
-            sleep(3)
-
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                content_sid=template_iap
-            )
-            sleep(3)
-
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                content_sid=template_pe
-            )
-
-            estado_cliente["etapa"] = "encerrado"
-            sleep(2)
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                to=from_whatsapp_number,
-                content_sid=template_loop
-            )
-            return "OK", 200
-        elif estado_cliente["etapa"] == "aguardando_confirmacao_fallback":
-            if incoming_msg.lower() in ["sim", "s", "yes", "y", "pode", "claro", "ok"]:
-                # Restaura o estado anterior
-                estado_anterior = aguardando_confirmacao.get(from_whatsapp_number)
-                if estado_anterior:
-                    estado_cliente["etapa"] = estado_anterior["etapa"]
-                    # Mensagem de transição
-                    client.messages.create(
-                        from_='whatsapp:+14155238886',
-                        to=from_whatsapp_number,
-                        body="Ótimo! Vamos continuar então! 😊"
-                    )
-                    sleep(1)
-                    # Repete a última pergunta
-                    if "template_id" in questionnaire.questions[estado_anterior["current_field"]]:
-                        template_id = questionnaire.questions[estado_anterior["current_field"]]["template_id"]
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            content_sid=globals()[template_id]
-                        )
-                    else:
-                        client.messages.create(
-                            from_='whatsapp:+14155238886',
-                            to=from_whatsapp_number,
-                            body=estado_anterior["ultima_pergunta"]
-                        )
-            else:
-                # Mensagens mais naturais para quando o usuário não quer continuar
-                respostas_nao = [
-                    "Tudo bem! Quando quiser retomar o formulário, é só me avisar dizendo 'quero continuar'. 😊",
-                    "Ok, sem problemas! Podemos continuar depois, basta dizer 'quero continuar'. 👍",
-                    "Entendi! Quando estiver pronto para continuar, me avise com 'quero continuar'. 🤗",
-                    "Claro! Ficarei aqui aguardando. Quando quiser voltar, diga 'quero continuar'. 😉"
-                ]
-                client.messages.create(
-                    from_='whatsapp:+14155238886',
-                    to=from_whatsapp_number,
-                    body=random.choice(respostas_nao)
-                )
-                estado_cliente["etapa"] = "inicial"
+        # Remover colunas não utilizadas
+        df = df.drop(['Unnamed1', 'Unnamed2', 'CPF', 'Motivo'], axis=1)
         
-            # Limpa o estado de confirmação
-            if from_whatsapp_number in aguardando_confirmacao:
-                del aguardando_confirmacao[from_whatsapp_number]
-
-            return "OK", 200
-
-        # Retorno default se nenhuma condição anterior for satisfeita
-        return "OK", 200
+        # Limpar e converter dados
+        df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
+        df['Renda Mensal'] = df['Renda Mensal'].str.replace('.', '').str.replace(',', '.').astype(float)
+        
+        logger.info(f"Dados carregados com sucesso. Shape: {df.shape}")
+        logger.info(f"Colunas: {df.columns.tolist()}")
+        logger.info(f"Primeiras linhas:\n{df.head()}")
+        
+        return df
+        
     except Exception as e:
-        logger.error(f"Erro no processamento do bot: {str(e)}")
-        return "OK", 200  # Sempre retorna OK mesmo em caso de erro
+        logger.error(f"Erro ao carregar dados: {str(e)}")
+        return pd.DataFrame()
+
+def create_graphs(df):
+    try:
+        logger.info("Iniciando criação dos gráficos")
+        graphs = {}
+        
+        # Configuração padrão de layout
+        layout_config = {
+            'template': 'plotly_white',
+            'showlegend': True,
+            'margin': dict(l=40, r=40, t=40, b=40),
+            'height': 300
+        }
+        
+        # Gráfico de idade
+        logger.info("Criando gráfico de idade")
+        idade_data = [{
+            'type': 'histogram',
+            'x': df['Idade'].tolist(),
+            'nbinsx': 20,
+            'name': 'Distribuição',
+            'marker': {'color': '#4CAF50'}
+        }]
+        
+        idade_layout = {
+            **layout_config,
+            'title': 'Distribuição de Idade',
+            'xaxis': {'title': 'Idade'},
+            'yaxis': {'title': 'Quantidade'}
+        }
+        
+        graphs['idade'] = {'data': idade_data, 'layout': idade_layout}
+        
+        # Gráfico de renda
+        logger.info("Criando gráfico de renda")
+        renda_data = [{
+            'type': 'histogram',
+            'x': df['Renda Mensal'].tolist(),
+            'nbinsx': 20,
+            'name': 'Distribuição',
+            'marker': {'color': '#2196F3'}
+        }]
+        
+        renda_layout = {
+            **layout_config,
+            'title': 'Distribuição de Renda',
+            'xaxis': {'title': 'Renda (R$)'},
+            'yaxis': {'title': 'Quantidade'}
+        }
+        
+        graphs['renda'] = {'data': renda_data, 'layout': renda_layout}
+        
+        # Gráfico de tipo de trabalho
+        logger.info("Criando gráfico de tipo de trabalho")
+        trabalho_counts = df['Tipo de Trabalho'].value_counts()
+        trabalho_data = [{
+            'type': 'pie',
+            'labels': trabalho_counts.index.tolist(),
+            'values': trabalho_counts.values.tolist(),
+            'hole': 0.3,
+            'marker': {'colors': ['#FF9800', '#9C27B0']}
+        }]
+        
+        trabalho_layout = {
+            **layout_config,
+            'title': 'Tipo de Trabalho'
+        }
+        
+        graphs['trabalho'] = {'data': trabalho_data, 'layout': trabalho_layout}
+        
+        # Gráfico de filhos
+        logger.info("Criando gráfico de filhos")
+        filhos_counts = df['Filhos Menores'].value_counts()
+        filhos_data = [{
+            'type': 'bar',
+            'x': filhos_counts.index.tolist(),
+            'y': filhos_counts.values.tolist(),
+            'marker': {'color': '#E91E63'}
+        }]
+        
+        filhos_layout = {
+            **layout_config,
+            'title': 'Número de Filhos Menores',
+            'xaxis': {'title': 'Tem Filhos'},
+            'yaxis': {'title': 'Número de Pessoas'}
+        }
+        
+        graphs['filhos'] = {'data': filhos_data, 'layout': filhos_layout}
+        
+        # Gráfico de experiência
+        logger.info("Criando gráfico de experiência")
+        carteira_counts = df['Experiência > 3 anos'].value_counts()
+        carteira_data = [{
+            'type': 'pie',
+            'labels': carteira_counts.index.tolist(),
+            'values': carteira_counts.values.tolist(),
+            'hole': 0.3,
+            'marker': {'colors': ['#3F51B5', '#F44336']}
+        }]
+        
+        carteira_layout = {
+            **layout_config,
+            'title': 'Mais de 3 Anos de Experiência'
+        }
+        
+        graphs['carteira'] = {'data': carteira_data, 'layout': carteira_layout}
+        
+        logger.info("Gráficos criados com sucesso")
+        return graphs
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar gráficos: {str(e)}")
+        return None
+
+def generate_insights(df):
+    try:
+        logger.info("Iniciando geração de insights")
+        insights = "<ul class='insights-list'>"
+        
+        # Insight sobre idade
+        idade_media = df['Idade'].mean()
+        idade_min = df['Idade'].min()
+        idade_max = df['Idade'].max()
+        insights += f"<li><strong>Faixa Etária:</strong> A idade média dos leads é {idade_media:.1f} anos, variando de {idade_min:.0f} a {idade_max:.0f} anos.</li>"
+        
+        # Insight sobre renda
+        renda_media = df['Renda Mensal'].mean()
+        renda_min = df['Renda Mensal'].min()
+        renda_max = df['Renda Mensal'].max()
+        insights += f"<li><strong>Perfil Financeiro:</strong> A renda média mensal é R$ {renda_media:,.2f}, com valores entre R$ {renda_min:,.2f} e R$ {renda_max:,.2f}.</li>"
+        
+        # Insight sobre tipo de trabalho
+        trabalho_counts = df['Tipo de Trabalho'].value_counts()
+        tipo_mais_comum = trabalho_counts.index[0]
+        percentual_tipo = (trabalho_counts[0] / len(df)) * 100
+        insights += f"<li><strong>Situação Profissional:</strong> {percentual_tipo:.1f}% dos leads são {tipo_mais_comum}.</li>"
+        
+        # Insight sobre filhos
+        tem_filhos = (df['Filhos Menores'].str.lower() == 'sim').mean() * 100
+        insights += f"<li><strong>Estrutura Familiar:</strong> {tem_filhos:.1f}% dos leads têm filhos menores.</li>"
+        
+        # Insight sobre experiência
+        experiencia = (df['Experiência > 3 anos'].str.lower() == 'sim').mean() * 100
+        insights += f"<li><strong>Experiência Profissional:</strong> {experiencia:.1f}% têm mais de 3 anos de experiência.</li>"
+        
+        insights += "</ul>"
+        logger.info("Insights gerados com sucesso")
+        return insights
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar insights: {str(e)}")
+        return "<p class='alert alert-warning'>Não foi possível gerar insights no momento.</p>"
+
+@app.route('/dashboard')
+def dashboard():
+    try:
+        logger.info("Carregando dados para o dashboard")
+        df = load_data()
+        if df.empty:
+            logger.error("DataFrame vazio após carregar dados")
+            return render_template(
+                'dashboard.html',
+                error="Não foi possível carregar os dados. Verifique o arquivo CSV.",
+                table="",
+                graphJSON="{}",
+                insights="",
+                error=None
+            )
+
+        # Criar tabela HTML com as 4 primeiras linhas
+        table = df.head(4).to_html(
+            classes=['table', 'table-striped', 'table-hover'],
+            index=False,
+            float_format=lambda x: '{:,.2f}'.format(x).replace(',', '_').replace('.', ',').replace('_', '.'),
+            formatters={
+                'Renda Mensal': lambda x: f'R$ {x:,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
+            }
+        )
+        
+        # Criar gráficos
+        graphs = create_graphs(df)
+        if not graphs:
+            logger.error("Falha ao criar gráficos")
+            graphs = {}
+            
+        # Gerar insights
+        insights = generate_insights(df)
+        if not insights:
+            logger.warning("Falha ao gerar insights")
+            insights = "<p class='alert alert-warning'>Não foi possível gerar insights no momento.</p>"
+        
+        # Preparar dados para paginação
+        total_rows = len(df)
+        has_more = total_rows > 4
+
+        # Converter gráficos para JSON
+        import plotly.utils
+        graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
+        logger.info("Dados preparados com sucesso para o template")
+        
+        return render_template(
+            'dashboard.html',
+            table=table,
+            graphJSON=graphJSON,
+            insights=insights,
+            total_rows=total_rows,
+            has_more=has_more,
+            error=None
+        )
+        
+    except Exception as e:
+        logger.error(f"Erro ao renderizar dashboard: {str(e)}")
+        return render_template(
+            'dashboard.html',
+            error="Ocorreu um erro ao carregar o dashboard. Por favor, tente novamente.",
+            table="",
+            graphJSON="{}",
+            insights=""
+        )
+
+@app.route('/load_more_data')
+def load_more_data():
+    df = load_data()
+    start = int(request.args.get('start', 4))
+    length = int(request.args.get('length', 10))
+    
+    more_data = df.iloc[start:start+length].to_html(
+        classes=['table', 'table-striped', 'table-hover'],
+        index=False,
+        float_format=lambda x: '{:,.2f}'.format(x).replace(',', '_').replace('.', ',').replace('_', '.'),
+        formatters={
+            'Renda Mensal': lambda x: f'R$ {x:,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
+        }
+    )
+    
+    return jsonify({
+        'data': more_data,
+        'has_more': start + length < len(df)
+    })
 
 @app.route('/')
 def index():
     logger.info("Rota index acessada")
-    return "Funcionando 2025!"
+    return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

@@ -10463,3 +10463,103 @@ NameError: name 'ultima_pergunta' is not defined
 2025-02-05 16:05:11,664 - apscheduler.executors.default - INFO - Job "verificar_inatividade (trigger: interval[0:30:00], next run at: 2025-02-05 16:35:11 -03)" executed successfully
 2025-02-05 16:05:15,785 - apscheduler.executors.default - INFO - Running job "verificar_inatividade (trigger: interval[0:30:00], next run at: 2025-02-05 16:35:15 -03)" (scheduled at 2025-02-05 16:05:15.785052-03:00)
 2025-02-05 16:05:15,786 - apscheduler.executors.default - INFO - Job "verificar_inatividade (trigger: interval[0:30:00], next run at: 2025-02-05 16:35:15 -03)" executed successfully
+2025-02-09 19:05:03,629 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-09 19:05:03,630 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-09 19:05:03,631 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-09 19:05:04,346 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-09 19:05:04,346 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-09 19:05:04,347 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-09 19:05:04,348 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-09 19:05:04,348 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-09 19:05:04,349 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-09 19:05:05,810 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.101:5000
+2025-02-09 19:05:05,811 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-02-09 19:05:17,978 - __main__ - INFO - Rota index acessada
+2025-02-09 19:05:17,980 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:05:17] "GET / HTTP/1.1" 200 -
+2025-02-09 19:05:18,167 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:05:18] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-02-09 19:05:23,811 - __main__ - INFO - Rota dashboard acessada
+2025-02-09 19:05:23,812 - __main__ - ERROR - Erro ao carregar CSV: Error tokenizing data. C error: Expected 11 fields in line 20, saw 13
+
+2025-02-09 19:05:23,816 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:05:23] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -
+2025-02-09 19:08:02,702 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-09 19:08:02,703 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-09 19:08:02,703 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-09 19:08:03,374 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-09 19:08:03,375 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-09 19:08:03,375 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-09 19:08:03,376 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-09 19:08:03,376 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-09 19:08:03,377 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-09 19:08:04,832 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.101:5000
+2025-02-09 19:08:04,833 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-02-09 19:08:11,212 - __main__ - INFO - Rota dashboard acessada
+2025-02-09 19:08:11,223 - __main__ - INFO - Arquivo CSV de exemplo criado em data/costumers.csv
+2025-02-09 19:08:12,510 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-09 19:08:12,512 - __main__ - ERROR - Erro ao gerar insights: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************jZgA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-09 19:08:12,531 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:08:12] "GET /dashboard HTTP/1.1" 200 -
+2025-02-09 19:08:12,576 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:08:12] "GET /static/css/dashboard.css HTTP/1.1" 200 -
+2025-02-09 19:08:27,229 - __main__ - INFO - Rota dashboard acessada
+2025-02-09 19:08:27,797 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-09 19:08:27,798 - __main__ - ERROR - Erro ao gerar insights: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************jZgA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-09 19:08:27,799 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:08:27] "GET /dashboard HTTP/1.1" 200 -
+2025-02-09 19:08:27,811 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:08:27] "[36mGET /static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-02-09 19:08:28,741 - __main__ - INFO - Rota dashboard acessada
+2025-02-09 19:08:29,311 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-02-09 19:08:29,312 - __main__ - ERROR - Erro ao gerar insights: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************jZgA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-02-09 19:08:29,313 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:08:29] "GET /dashboard HTTP/1.1" 200 -
+2025-02-09 19:08:29,327 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:08:29] "[36mGET /static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-02-09 19:18:49,208 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-09 19:18:49,209 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-09 19:18:49,209 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-09 19:18:49,210 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-09 19:18:49,211 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-09 19:18:49,211 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-09 19:18:50,675 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.15.101:5000
+2025-02-09 19:18:50,676 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-02-09 19:18:54,067 - __main__ - INFO - Rota dashboard acessada
+2025-02-09 19:18:54,081 - __main__ - ERROR - Erro ao carregar CSV: Error tokenizing data. C error: Expected 11 fields in line 20, saw 13
+
+2025-02-09 19:18:54,084 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:18:54] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -
+2025-02-09 19:18:55,225 - __main__ - INFO - Rota dashboard acessada
+2025-02-09 19:18:55,227 - __main__ - ERROR - Erro ao carregar CSV: Error tokenizing data. C error: Expected 11 fields in line 20, saw 13
+
+2025-02-09 19:18:55,228 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:18:55] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -

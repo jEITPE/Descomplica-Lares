@@ -8,3 +8,7 @@ markdown
 beautifulsoup4
 apscheduler
 gunicorn
+pandas
+plotly
+dash
+dash-bootstrap-components
