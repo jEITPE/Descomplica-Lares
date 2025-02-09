@@ -38,7 +38,10 @@ logger = logging.getLogger(__name__)
 # Carregar variáveis de ambiente
 load_dotenv()
 
-app = Flask(__name__)
+# Configuração do Flask
+app = Flask(__name__, static_url_path='', static_folder='static')
+app.config['SECRET_KEY'] = os.urandom(24)
+app.config['UPLOAD_FOLDER'] = os.path.join('data', 'treinamento_ia', 'csv')
 
 # Configuração do logger
 logging.basicConfig(
@@ -76,6 +79,11 @@ llm = ChatOpenAI(
     model="gpt-3.5-turbo",     # Modelo GPT-3.5-turbo
     max_tokens=130,
     temperature=0.2,            # Mantém respostas previsíveis
+    model_kwargs={
+        "top_p": 0.7,
+        "frequency_penalty": 0.5,
+        "presence_penalty": 0.0
+    },
     openai_api_key=api_key
 )
 
@@ -175,7 +183,8 @@ prompt_lola = PromptTemplate(
     Responda as perguntas normalmente, sem 'Lola:'.
     """
 )
-conversation_chain = LLMChain(llm=llm, prompt=prompt_lola)
+conversation_chain = llm | prompt_lola
+
 
 # Prompt para Rubens
 prompt_rubens = PromptTemplate(
@@ -203,7 +212,7 @@ prompt_rubens = PromptTemplate(
     Cliente: {message}
     """
 )
-intention_chain = LLMChain(llm=llm, prompt=prompt_rubens)
+intention_chain = llm | prompt_rubens
 
 # Prompt Fallback
 prompt_fallback = PromptTemplate(
@@ -254,7 +263,7 @@ prompt_fallback = PromptTemplate(
     Responda apenas com "FALLBACK" ou "CONTINUE_FLOW".
     """
 )
-fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
+fallback_chain = llm | prompt_fallback
 
 # Mapeamento dos IDs dos botões
 BUTTON_IDS = {
