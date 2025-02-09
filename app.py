@@ -78,7 +78,11 @@ def carregar_markdown(markdown_path):
         return ""
 
 # Caminho para o arquivo Markdown
-markdown_instrucoes = carregar_markdown(lola_md)
+try:
+    markdown_instrucoes = carregar_markdown(lola_md) if 'lola_md' in globals() else None
+except Exception as e:
+    logger.warning(f"Erro ao carregar markdown: {e}")
+    markdown_instrucoes = None
 
 # Carregar JSON
 def carregar_json(json_path):
@@ -90,7 +94,11 @@ def carregar_json(json_path):
         return {}
 
 # Caminho para o arquivo JSON
-configuracoes = carregar_json(lola_json)
+try:
+    configuracoes = carregar_json(lola_json) if 'lola_json' in globals() else None
+except Exception as e:
+    logger.warning(f"Erro ao carregar JSON: {e}")
+    configuracoes = None
 
 # Prompt para Lola
 prompt_lola = PromptTemplate(
@@ -887,6 +895,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
 
 @app.route('/')
 def index():
+    logger.info("Rota index acessada")
     return "Funcionando 2025!"
 
 if __name__ == '__main__':
