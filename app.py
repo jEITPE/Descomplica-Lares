@@ -551,6 +551,45 @@ def load_data():
         logger.error(f"Erro ao carregar dados: {str(e)}")
         return pd.DataFrame()
 
+def generate_insights(df):
+    try:
+        logger.info("Iniciando geração de insights")
+        insights = "<ul class='insights-list'>"
+        
+        # Insight sobre idade
+        idade_media = df['Idade'].mean()
+        idade_min = df['Idade'].min()
+        idade_max = df['Idade'].max()
+        insights += f"<li><strong>Faixa Etária:</strong> A idade média dos leads é {idade_media:.1f} anos, variando de {idade_min:.0f} a {idade_max:.0f} anos.</li>"
+        
+        # Insight sobre renda
+        renda_media = df['Renda Mensal'].mean()
+        renda_min = df['Renda Mensal'].min()
+        renda_max = df['Renda Mensal'].max()
+        insights += f"<li><strong>Perfil Financeiro:</strong> A renda média mensal é R$ {renda_media:,.2f}, com valores entre R$ {renda_min:,.2f} e R$ {renda_max:,.2f}.</li>"
+        
+        # Insight sobre tipo de trabalho
+        trabalho_counts = df['Tipo de Trabalho'].value_counts()
+        tipo_mais_comum = trabalho_counts.index[0]
+        percentual_tipo = (trabalho_counts[0] / len(df)) * 100
+        insights += f"<li><strong>Situação Profissional:</strong> {percentual_tipo:.1f}% dos leads são {tipo_mais_comum}.</li>"
+        
+        # Insight sobre filhos
+        tem_filhos = (df['Filhos Menores'].str.lower() == 'sim').mean() * 100
+        insights += f"<li><strong>Estrutura Familiar:</strong> {tem_filhos:.1f}% dos leads têm filhos menores.</li>"
+        
+        # Insight sobre experiência
+        experiencia = (df['Experiência > 3 anos'].str.lower() == 'sim').mean() * 100
+        insights += f"<li><strong>Experiência Profissional:</strong> {experiencia:.1f}% têm mais de 3 anos de experiência.</li>"
+        
+        insights += "</ul>"
+        logger.info("Insights gerados com sucesso")
+        return insights
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar insights: {str(e)}")
+        return "<p class='alert alert-warning'>Não foi possível gerar insights no momento.</p>"
+
 def create_graphs(df):
     try:
         logger.info("Iniciando criação dos gráficos")
@@ -664,45 +703,6 @@ def create_graphs(df):
         logger.error(f"Erro ao criar gráficos: {str(e)}")
         return None
 
-def generate_insights(df):
-    try:
-        logger.info("Iniciando geração de insights")
-        insights = "<ul class='insights-list'>"
-        
-        # Insight sobre idade
-        idade_media = df['Idade'].mean()
-        idade_min = df['Idade'].min()
-        idade_max = df['Idade'].max()
-        insights += f"<li><strong>Faixa Etária:</strong> A idade média dos leads é {idade_media:.1f} anos, variando de {idade_min:.0f} a {idade_max:.0f} anos.</li>"
-        
-        # Insight sobre renda
-        renda_media = df['Renda Mensal'].mean()
-        renda_min = df['Renda Mensal'].min()
-        renda_max = df['Renda Mensal'].max()
-        insights += f"<li><strong>Perfil Financeiro:</strong> A renda média mensal é R$ {renda_media:,.2f}, com valores entre R$ {renda_min:,.2f} e R$ {renda_max:,.2f}.</li>"
-        
-        # Insight sobre tipo de trabalho
-        trabalho_counts = df['Tipo de Trabalho'].value_counts()
-        tipo_mais_comum = trabalho_counts.index[0]
-        percentual_tipo = (trabalho_counts[0] / len(df)) * 100
-        insights += f"<li><strong>Situação Profissional:</strong> {percentual_tipo:.1f}% dos leads são {tipo_mais_comum}.</li>"
-        
-        # Insight sobre filhos
-        tem_filhos = (df['Filhos Menores'].str.lower() == 'sim').mean() * 100
-        insights += f"<li><strong>Estrutura Familiar:</strong> {tem_filhos:.1f}% dos leads têm filhos menores.</li>"
-        
-        # Insight sobre experiência
-        experiencia = (df['Experiência > 3 anos'].str.lower() == 'sim').mean() * 100
-        insights += f"<li><strong>Experiência Profissional:</strong> {experiencia:.1f}% têm mais de 3 anos de experiência.</li>"
-        
-        insights += "</ul>"
-        logger.info("Insights gerados com sucesso")
-        return insights
-        
-    except Exception as e:
-        logger.error(f"Erro ao gerar insights: {str(e)}")
-        return "<p class='alert alert-warning'>Não foi possível gerar insights no momento.</p>"
-
 @app.route('/dashboard')
 def dashboard():
     try:
@@ -715,8 +715,7 @@ def dashboard():
                 error="Não foi possível carregar os dados. Verifique o arquivo CSV.",
                 table="",
                 graphJSON="{}",
-                insights="",
-                error=None
+                insights=""
             )
 
         # Criar tabela HTML com as 4 primeiras linhas
@@ -729,18 +728,15 @@ def dashboard():
             }
         )
         
+        # Gerar insights
+        insights = generate_insights(df)
+        
         # Criar gráficos
         graphs = create_graphs(df)
         if not graphs:
             logger.error("Falha ao criar gráficos")
             graphs = {}
             
-        # Gerar insights
-        insights = generate_insights(df)
-        if not insights:
-            logger.warning("Falha ao gerar insights")
-            insights = "<p class='alert alert-warning'>Não foi possível gerar insights no momento.</p>"
-        
         # Preparar dados para paginação
         total_rows = len(df)
         has_more = total_rows > 4
@@ -756,8 +752,7 @@ def dashboard():
             graphJSON=graphJSON,
             insights=insights,
             total_rows=total_rows,
-            has_more=has_more,
-            error=None
+            has_more=has_more
         )
         
     except Exception as e:
