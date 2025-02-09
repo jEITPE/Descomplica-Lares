@@ -13,6 +13,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
 import markdown
+from questionnaire_ai import QuestionnaireAI
 from bs4 import BeautifulSoup
 from time import sleep
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -22,8 +23,6 @@ import os
 import csv
 import json
 import logging
-from questionnaire_ai import QuestionnaireAI
-import random
 import pandas as pd
 import plotly
 import plotly.express as px
