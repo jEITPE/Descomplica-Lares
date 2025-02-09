@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-danger" role="alert">
+    {{ error }}
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Visão Geral dos Leads</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="window.location.reload()">
+                    <i class="fas fa-sync-alt"></i> Atualizar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Distribuição por Idade</h5>
+            </div>
+            <div class="card-body">
+                <div id="idade_chart" style="width: 100%; height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Distribuição de Renda Mensal</h5>
+            </div>
+            <div class="card-body">
+                <div id="renda_chart" style="width: 100%; height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Tipo de Trabalho</h5>
+            </div>
+            <div class="card-body">
+                <div id="trabalho_chart" style="width: 100%; height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Filhos Menores</h5>
+            </div>
+            <div class="card-body">
+                <div id="filhos_chart" style="width: 100%; height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Experiência Profissional</h5>
+            </div>
+            <div class="card-body">
+                <div id="carteira_chart" style="width: 100%; height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card insight-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Insights de Marketing</h5>
+            </div>
+            <div class="card-body">
+                {% if insights %}
+                    {{ insights | safe }}
+                {% else %}
+                    <p class="alert alert-warning">Aguardando geração de insights...</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dados Detalhados</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div id="table-container">
+                        {{ table | safe }}
+                    </div>
+                    {% if has_more %}
+                    <div class="text-center mt-3">
+                        <button id="load-more" class="btn btn-primary">
+                            <i class="fas fa-plus-circle"></i> Ver mais dados
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        var graphs = {{ graphJSON | safe }};
+        console.log('Dados dos gráficos:', graphs);  // Debug
+        
+        var config = {
+            responsive: true,
+            displayModeBar: false
+        };
+        
+        // Função auxiliar para criar gráfico
+        function createPlot(elementId, graphData) {
+            if (document.getElementById(elementId)) {
+                try {
+                    Plotly.newPlot(elementId, graphData.data, graphData.layout, config);
+                } catch (err) {
+                    console.error(`Erro ao criar gráfico ${elementId}:`, err);
+                }
+            } else {
+                console.error(`Elemento ${elementId} não encontrado`);
+            }
+        }
+        
+        // Criar cada gráfico
+        if (graphs.idade) {
+            createPlot('idade_chart', graphs.idade);
+        }
+        if (graphs.renda) {
+            createPlot('renda_chart', graphs.renda);
+        }
+        if (graphs.trabalho) {
+            createPlot('trabalho_chart', graphs.trabalho);
+        }
+        if (graphs.filhos) {
+            createPlot('filhos_chart', graphs.filhos);
+        }
+        if (graphs.carteira) {
+            createPlot('carteira_chart', graphs.carteira);
+        }
+    } catch (error) {
+        console.error('Erro ao renderizar gráficos:', error);
+    }
+});
+
+let start = 4;
+const length = 10;
+let loading = false;
+
+document.getElementById('load-more')?.addEventListener('click', async function() {
+    if (loading) return;
+    loading = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+    
+    try {
+        const response = await fetch(`/load_more_data?start=${start}&length=${length}`);
+        const data = await response.json();
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = data.data;
+        
+        const newRows = tempDiv.querySelector('tbody').rows;
+        const currentTable = document.querySelector('#table-container table tbody');
+        
+        Array.from(newRows).forEach(row => {
+            currentTable.appendChild(row.cloneNode(true));
+        });
+        
+        start += length;
+        
+        if (!data.has_more) {
+            this.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar mais dados:', error);
+        this.innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro ao carregar. Tente novamente.';
+    } finally {
+        loading = false;
+        if (this.style.display !== 'none') {
+            this.innerHTML = '<i class="fas fa-plus-circle"></i> Ver mais dados';
+        }
+    }
+});
+</script>
+
+<style>
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    text-align: center;
+}
+
+.table td {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.table-responsive {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.btn-primary {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+}
+
+.btn-primary:hover {
+    background-color: #45a049;
+    border-color: #45a049;
+}
+</style>
+{% endblock %}
