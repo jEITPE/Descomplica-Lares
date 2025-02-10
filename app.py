@@ -537,10 +537,19 @@ def load_data():
                        'Tipo de Trabalho', 'Motivo', 'Filhos Menores', 'Renda Mensal', 
                        'Unnamed1', 'Unnamed2']
         
-        try:
-            df = pd.read_csv(file_path, encoding='latin1', names=column_names, header=None)
-        except:
-            df = pd.read_csv(file_path, encoding='utf-8', names=column_names, header=None)
+        # Tentar diferentes encodings em ordem
+        encodings = ['utf-8', 'utf-8-sig', 'latin1', 'iso-8859-1']
+        df = None
+        
+        for encoding in encodings:
+            try:
+                df = pd.read_csv(file_path, encoding=encoding, names=column_names, header=None)
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if df is None:
+            raise Exception("Não foi possível ler o arquivo com nenhum dos encodings tentados")
         
         # Remover colunas não utilizadas
         df = df.drop(['Unnamed1', 'Unnamed2', 'CPF', 'Motivo'], axis=1)
@@ -548,6 +557,11 @@ def load_data():
         # Limpar e converter dados
         df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
         df['Renda Mensal'] = df['Renda Mensal'].str.replace('.', '').str.replace(',', '.').astype(float)
+        
+        # Normalizar strings para UTF-8
+        text_columns = ['Nome', 'Estado Civil', 'Tipo de Trabalho', 'Filhos Menores', 'Experiência > 3 anos']
+        for col in text_columns:
+            df[col] = df[col].astype(str).apply(lambda x: x.strip())
         
         logger.info(f"Dados carregados com sucesso. Shape: {df.shape}")
         logger.info(f"Colunas: {df.columns.tolist()}")
@@ -558,6 +572,211 @@ def load_data():
     except Exception as e:
         logger.error(f"Erro ao carregar dados: {str(e)}")
         return pd.DataFrame()
+
+def create_graphs(df):
+    try:
+        logger.info("Iniciando criação dos gráficos")
+        graphs = {}
+        
+        # Configuração padrão de layout
+        layout_config = {
+            'template': 'plotly_white',
+            'showlegend': True,
+            'margin': dict(l=40, r=40, t=40, b=40),
+            'height': 300,
+            'paper_bgcolor': 'rgba(0,0,0,0)',
+            'plot_bgcolor': 'rgba(0,0,0,0)',
+            'font': {
+                'family': 'Inter, sans-serif',
+                'size': 12,
+                'color': '#555'
+            }
+        }
+        
+        # Gráfico de idade - Linha com área
+        logger.info("Criando gráfico de idade")
+        idade_bins = pd.cut(df['Idade'], bins=[0, 25, 30, 35, 40, 100], labels=['20-25', '26-30', '31-35', '36-40', '41+'])
+        idade_counts = idade_bins.value_counts().sort_index()
+        
+        idade_data = [{
+            'type': 'scatter',
+            'x': idade_counts.index,
+            'y': idade_counts.values,
+            'mode': 'lines+markers',
+            'name': 'Distribuição',
+            'line': {
+                'color': '#8339EA',
+                'width': 3,
+                'shape': 'spline'
+            },
+            'marker': {
+                'size': 8,
+                'color': '#8339EA'
+            },
+            'fill': 'tozeroy',
+            'fillcolor': 'rgba(131, 57, 234, 0.1)'
+        }]
+        
+        idade_layout = {
+            **layout_config,
+            'title': {'text': 'Distribuição por Idade', 'font': {'family': 'Inter, sans-serif', 'size': 16}},
+            'xaxis': {
+                'title': None,
+                'showgrid': False,
+                'showline': False
+            },
+            'yaxis': {
+                'title': None,
+                'showgrid': True,
+                'gridcolor': 'rgba(0,0,0,0.1)',
+                'showline': False
+            }
+        }
+        
+        graphs['idade'] = {'data': idade_data, 'layout': idade_layout}
+        
+        # Gráfico de renda - Barras modernas
+        logger.info("Criando gráfico de renda")
+        renda_bins = pd.cut(df['Renda Mensal'], 
+                          bins=[0, 3000, 5000, 8000, float('inf')],
+                          labels=['0-3k', '3k-5k', '5k-8k', '8k+'])
+        renda_counts = renda_bins.value_counts().sort_index()
+        
+        renda_data = [{
+            'type': 'bar',
+            'x': renda_counts.index,
+            'y': renda_counts.values,
+            'name': 'Distribuição',
+            'marker': {
+                'color': '#FDBB0C',
+                'opacity': 0.9
+            }
+        }]
+        
+        renda_layout = {
+            **layout_config,
+            'title': {'text': 'Distribuição de Investimento', 'font': {'family': 'Inter, sans-serif', 'size': 16}},
+            'xaxis': {
+                'title': None,
+                'showgrid': False,
+                'showline': False
+            },
+            'yaxis': {
+                'title': None,
+                'showgrid': True,
+                'gridcolor': 'rgba(0,0,0,0.1)',
+                'showline': False
+            }
+        }
+        
+        graphs['renda'] = {'data': renda_data, 'layout': renda_layout}
+        
+        # Gráfico de tipo de trabalho - Donut moderno
+        logger.info("Criando gráfico de tipo de trabalho")
+        trabalho_counts = df['Tipo de Trabalho'].value_counts()
+        trabalho_data = [{
+            'type': 'pie',
+            'labels': trabalho_counts.index,
+            'values': trabalho_counts.values,
+            'hole': 0.6,
+            'marker': {
+                'colors': ['#8339EA', '#FDBB0C'],
+            },
+            'textinfo': 'percent',
+            'textposition': 'outside',
+            'textfont': {
+                'family': 'Inter, sans-serif',
+                'size': 12
+            }
+        }]
+        
+        trabalho_layout = {
+            **layout_config,
+            'title': {'text': 'Origem dos Leads', 'font': {'family': 'Inter, sans-serif', 'size': 16}},
+            'showlegend': True,
+            'legend': {
+                'orientation': 'h',
+                'yanchor': 'bottom',
+                'y': -0.2,
+                'xanchor': 'center',
+                'x': 0.5
+            }
+        }
+        
+        graphs['trabalho'] = {'data': trabalho_data, 'layout': trabalho_layout}
+        
+        # Gráfico de filhos - Barras verticais modernas
+        logger.info("Criando gráfico de filhos")
+        filhos_counts = df['Filhos Menores'].value_counts()
+        filhos_data = [{
+            'type': 'bar',
+            'x': filhos_counts.index,
+            'y': filhos_counts.values,
+            'marker': {
+                'color': '#8339EA',
+                'opacity': 0.9
+            },
+            'textposition': 'auto'
+        }]
+        
+        filhos_layout = {
+            **layout_config,
+            'title': {'text': 'Interesse dos Leads', 'font': {'family': 'Inter, sans-serif', 'size': 16}},
+            'xaxis': {
+                'title': None,
+                'showgrid': False,
+                'showline': False
+            },
+            'yaxis': {
+                'title': None,
+                'showgrid': True,
+                'gridcolor': 'rgba(0,0,0,0.1)',
+                'showline': False
+            }
+        }
+        
+        graphs['filhos'] = {'data': filhos_data, 'layout': filhos_layout}
+        
+        # Gráfico de experiência - Pie moderno
+        logger.info("Criando gráfico de experiência")
+        carteira_counts = df['Experiência > 3 anos'].value_counts()
+        carteira_data = [{
+            'type': 'pie',
+            'labels': carteira_counts.index,
+            'values': carteira_counts.values,
+            'marker': {
+                'colors': ['#8339EA', '#FDBB0C']
+            },
+            'textinfo': 'percent',
+            'textposition': 'inside',
+            'textfont': {
+                'family': 'Inter, sans-serif',
+                'size': 12,
+                'color': 'white'
+            }
+        }]
+        
+        carteira_layout = {
+            **layout_config,
+            'title': {'text': 'Status dos Leads', 'font': {'family': 'Inter, sans-serif', 'size': 16}},
+            'showlegend': True,
+            'legend': {
+                'orientation': 'h',
+                'yanchor': 'bottom',
+                'y': -0.2,
+                'xanchor': 'center',
+                'x': 0.5
+            }
+        }
+        
+        graphs['carteira'] = {'data': carteira_data, 'layout': carteira_layout}
+        
+        logger.info("Gráficos criados com sucesso")
+        return graphs
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar gráficos: {str(e)}")
+        return None
 
 def generate_insights(df):
     try:
@@ -591,125 +810,16 @@ def generate_insights(df):
         insights += f"<li><strong>Experiência Profissional:</strong> {experiencia:.1f}% têm mais de 3 anos de experiência.</li>"
         
         insights += "</ul>"
+        
+        # Ensure proper UTF-8 encoding
+        insights = insights.encode('utf-8', errors='ignore').decode('utf-8')
+        
         logger.info("Insights gerados com sucesso")
         return insights
         
     except Exception as e:
         logger.error(f"Erro ao gerar insights: {str(e)}")
-        return "<p class='alert alert-warning'>Não foi possível gerar insights no momento.</p>"
-
-def create_graphs(df):
-    try:
-        logger.info("Iniciando criação dos gráficos")
-        graphs = {}
-        
-        # Configuração padrão de layout
-        layout_config = {
-            'template': 'plotly_white',
-            'showlegend': True,
-            'margin': dict(l=40, r=40, t=40, b=40),
-            'height': 300
-        }
-        
-        # Gráfico de idade
-        logger.info("Criando gráfico de idade")
-        idade_data = [{
-            'type': 'histogram',
-            'x': df['Idade'].tolist(),
-            'nbinsx': 20,
-            'name': 'Distribuição',
-            'marker': {'color': '#4CAF50'}
-        }]
-        
-        idade_layout = {
-            **layout_config,
-            'title': 'Distribuição de Idade',
-            'xaxis': {'title': 'Idade'},
-            'yaxis': {'title': 'Quantidade'}
-        }
-        
-        graphs['idade'] = {'data': idade_data, 'layout': idade_layout}
-        
-        # Gráfico de renda
-        logger.info("Criando gráfico de renda")
-        renda_data = [{
-            'type': 'histogram',
-            'x': df['Renda Mensal'].tolist(),
-            'nbinsx': 20,
-            'name': 'Distribuição',
-            'marker': {'color': '#2196F3'}
-        }]
-        
-        renda_layout = {
-            **layout_config,
-            'title': 'Distribuição de Renda',
-            'xaxis': {'title': 'Renda (R$)'},
-            'yaxis': {'title': 'Quantidade'}
-        }
-        
-        graphs['renda'] = {'data': renda_data, 'layout': renda_layout}
-        
-        # Gráfico de tipo de trabalho
-        logger.info("Criando gráfico de tipo de trabalho")
-        trabalho_counts = df['Tipo de Trabalho'].value_counts()
-        trabalho_data = [{
-            'type': 'pie',
-            'labels': trabalho_counts.index.tolist(),
-            'values': trabalho_counts.values.tolist(),
-            'hole': 0.3,
-            'marker': {'colors': ['#FF9800', '#9C27B0']}
-        }]
-        
-        trabalho_layout = {
-            **layout_config,
-            'title': 'Tipo de Trabalho'
-        }
-        
-        graphs['trabalho'] = {'data': trabalho_data, 'layout': trabalho_layout}
-        
-        # Gráfico de filhos
-        logger.info("Criando gráfico de filhos")
-        filhos_counts = df['Filhos Menores'].value_counts()
-        filhos_data = [{
-            'type': 'bar',
-            'x': filhos_counts.index.tolist(),
-            'y': filhos_counts.values.tolist(),
-            'marker': {'color': '#E91E63'}
-        }]
-        
-        filhos_layout = {
-            **layout_config,
-            'title': 'Número de Filhos Menores',
-            'xaxis': {'title': 'Tem Filhos'},
-            'yaxis': {'title': 'Número de Pessoas'}
-        }
-        
-        graphs['filhos'] = {'data': filhos_data, 'layout': filhos_layout}
-        
-        # Gráfico de experiência
-        logger.info("Criando gráfico de experiência")
-        carteira_counts = df['Experiência > 3 anos'].value_counts()
-        carteira_data = [{
-            'type': 'pie',
-            'labels': carteira_counts.index.tolist(),
-            'values': carteira_counts.values.tolist(),
-            'hole': 0.3,
-            'marker': {'colors': ['#3F51B5', '#F44336']}
-        }]
-        
-        carteira_layout = {
-            **layout_config,
-            'title': 'Mais de 3 Anos de Experiência'
-        }
-        
-        graphs['carteira'] = {'data': carteira_data, 'layout': carteira_layout}
-        
-        logger.info("Gráficos criados com sucesso")
-        return graphs
-        
-    except Exception as e:
-        logger.error(f"Erro ao criar gráficos: {str(e)}")
-        return None
+        return "Erro ao gerar insights."
 
 @app.route('/dashboard')
 def dashboard():
