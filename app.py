@@ -616,7 +616,7 @@ def bot():
             return "OK", 200
 
         if estado_cliente["etapa"] == "inicial":
-            intent_response = intention_chain.run(message=incoming_msg).strip()
+            intent_response = intention_chain.invoke(message=incoming_msg).strip()
             logger.info(f"Intenção detectada: {intent_response}")
             if intent_response == "PASS_BUTTON":
                 estado_cliente["etapa"] = "aguardando_opcao"
@@ -627,7 +627,7 @@ def bot():
                 )
                 return "OK", 200
             elif intent_response == "CONTINUE":
-                response = conversation_chain.run({
+                response = conversation_chain.invoke({
                     "message": incoming_msg,
                     "historico": historico,
                     "markdown_instrucoes": markdown_instrucoes,
