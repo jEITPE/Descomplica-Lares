@@ -627,7 +627,8 @@ def bot():
                 )
                 return "OK", 200
             elif intent_response == "CONTINUE":
-                response = conversation_chain.invoke({
+                response = conversation_chain.invoke(
+                    input={
                     "message": incoming_msg,
                     "historico": historico,
                     "markdown_instrucoes": markdown_instrucoes,

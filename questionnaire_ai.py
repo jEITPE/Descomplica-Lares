@@ -206,7 +206,8 @@ class QuestionnaireAI:
     def get_answer_from_knowledge_base(self, question, current_field=""):
         """Busca uma resposta na base de conhecimento"""
         try:
-            response = self.answer_chain.run({
+            response = self.answer_chain.invoke(
+                input={
                 "question": question,
                 "knowledge_base": self.knowledge_base,
                 "current_field": current_field
