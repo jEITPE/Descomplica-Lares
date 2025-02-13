@@ -34,10 +34,13 @@ template_autonomo_registrado = os.getenv("CONTENT_ID_AR")
 template_filhos = os.getenv("CONTENT_ID_FILHOS")
 
 api_key = os.getenv("API_KEY_OPENAI")
-lola_md = os.getenv("MARKDOWN_TRAINING")
-lola_json = os.getenv("JSON_TRAINING")
 
-csv_file = os.getenv("CSV_FILE")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+lola_md = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'lola.md')
+lola_json = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'lola.json')
+csv_file = os.path.join(BASE_DIR, 'data', 'csv', 'customers.csv')
+
 
 # Configuração do Langchain
 llm = ChatOpenAI(
@@ -341,7 +344,9 @@ def validar_todas_respostas(respostas):
     return len(erros) == 0, erros
 
 @app.route('/bot', methods=['POST'])
-def bot():
+def return_bot():
+    return "Funcionando /bot!"
+'''def bot():
     incoming_msg = request.values.get('Body', '').strip()
     from_whatsapp_number = request.values.get('From')
 
@@ -875,7 +880,30 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
                 )
             return "OK", 200
         return "OK", 200
-    return "OK", 200
+    return "OK", 200'''
+def bot():
+    try:
+        # Log dos dados recebidos
+        print("Dados completos recebidos:", request.values.to_dict())
+        
+        incoming_msg = request.values.get('Body', '').strip()
+        from_whatsapp_number = request.values.get('From')
+        
+        print(f"Número remetente: {from_whatsapp_number}")
+        print(f"Mensagem recebida: {incoming_msg}")
+        
+        # Tenta enviar uma mensagem simples de teste
+        message = client.messages.create(
+            from_='whatsapp:+14155238886',
+            to=from_whatsapp_number,
+            body="Mensagem de teste"
+        )
+        print(f"Mensagem enviada com SID: {message.sid}")
+        
+        return "OK", 200
+    except Exception as e:
+        print(f"Erro detalhado: {str(e)}")
+        return str(e), 500
 
 
 @app.route('/')
@@ -883,4 +911,4 @@ def index():
     return "Funcionando 2024!"
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

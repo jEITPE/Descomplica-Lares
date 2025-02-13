@@ -10563,3 +10563,37 @@ NameError: name 'ultima_pergunta' is not defined
 2025-02-09 19:18:55,227 - __main__ - ERROR - Erro ao carregar CSV: Error tokenizing data. C error: Expected 11 fields in line 20, saw 13
 
 2025-02-09 19:18:55,228 - werkzeug - INFO - 127.0.0.1 - - [09/Feb/2025 19:18:55] "[35m[1mGET /dashboard HTTP/1.1[0m" 500 -
+2025-02-12 21:13:51,280 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-12 21:13:51,281 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-12 21:13:51,282 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-12 21:13:51,282 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-12 21:13:51,283 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-12 21:13:51,283 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-12 21:13:51,871 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-12 21:14:03,557 - app - INFO - Carregando dados para o dashboard
+2025-02-12 21:14:03,558 - app - INFO - Iniciando carregamento de dados
+2025-02-12 21:14:03,587 - app - INFO - Dados carregados com sucesso. Shape: (10, 7)
+2025-02-12 21:14:03,587 - app - INFO - Colunas: ['Nome', 'Idade', 'Experiência > 3 anos', 'Estado Civil', 'Tipo de Trabalho', 'Filhos Menores', 'Renda Mensal']
+2025-02-12 21:14:03,594 - app - INFO - Primeiras linhas:
+             Nome  Idade Experiência > 3 anos Estado Civil Tipo de Trabalho Filhos Menores  Renda Mensal
+0      João Pedro     54                  Sim     Solteiro      Autônomo(a)            Sim       4000.00
+1      joao pedro     45                  Não       Casado      Autônomo(a)            Sim       9900.09
+2      joao pedro     55                  Não       Casado      Autônomo(a)            Sim        899.00
+3       koai ksef     45                  Sim      solange    Registrado(a)            Sim       4525.34
+4  ffddfdfdfd fdf     34                  Não     solteiro    Registrado(a)            Sim       8888.00
+2025-02-12 21:14:03,599 - app - INFO - Iniciando geração de insights
+2025-02-12 21:14:03,604 - app - INFO - Insights gerados com sucesso
+2025-02-12 21:14:03,604 - app - INFO - Iniciando criação dos gráficos
+2025-02-12 21:14:03,604 - app - INFO - Criando gráfico de idade
+2025-02-12 21:14:03,612 - app - INFO - Criando gráfico de renda
+2025-02-12 21:14:03,614 - app - INFO - Criando gráfico de tipo de trabalho
+2025-02-12 21:14:03,615 - app - INFO - Criando gráfico de filhos
+2025-02-12 21:14:03,616 - app - INFO - Criando gráfico de experiência
+2025-02-12 21:14:03,616 - app - INFO - Gráficos criados com sucesso
+2025-02-12 21:14:03,617 - app - INFO - Dados preparados com sucesso para o template
