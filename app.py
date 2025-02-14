@@ -31,6 +31,7 @@ import json
 from openai import OpenAI
 from flask import render_template
 import random
+from datetime import datetime
 
 # Configuração do logger
 logging.basicConfig(
@@ -535,6 +536,41 @@ def process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field
     
     return "OK", 200
 
+def load_interactions():
+    try:
+        interaction_file = os.path.join('data', 'interactions.json')
+        if os.path.exists(interaction_file):
+            with open(interaction_file, 'r') as f:
+                return json.load(f)
+        return {"interactions": {}}
+    except Exception as e:
+        logger.error(f"Erro ao carregar interações: {str(e)}")
+        return {"interactions": {}}
+
+def save_interaction(phone_number):
+    try:
+        interaction_file = os.path.join('data', 'interactions.json')
+        data = load_interactions()
+        
+        # Se o número não existe nas interações, adiciona
+        if phone_number not in data["interactions"]:
+            data["interactions"][phone_number] = {
+                "first_interaction": datetime.now().isoformat(),
+                "last_interaction": datetime.now().isoformat()
+            }
+        else:
+            # Se existe, apenas atualiza a última interação
+            data["interactions"][phone_number]["last_interaction"] = datetime.now().isoformat()
+        
+        # Salva o arquivo
+        with open(interaction_file, 'w') as f:
+            json.dump(data, f, indent=4)
+            
+        return len(data["interactions"])  # Retorna o total de interações únicas
+    except Exception as e:
+        logger.error(f"Erro ao salvar interação: {str(e)}")
+        return 0
+
 @app.route('/bot', methods=['POST'])
 def bot():
     try:
@@ -559,6 +595,11 @@ def bot():
 
         # Continua com o fluxo normal
         from_whatsapp_number = request.values.get('From')
+        
+        # Registra a interação e obtém o total atualizado
+        total_interacoes = save_interaction(from_whatsapp_number)
+        logger.info(f"Nova interação registrada. Total: {total_interacoes}")
+        
         if from_whatsapp_number not in conversation_contexts:
             conversation_contexts[from_whatsapp_number] = ConversationContext()
         
@@ -933,6 +974,10 @@ def load_data():
         logger.info("Iniciando carregamento de dados")
         file_path = os.path.join('data', 'treinamento_ia', 'csv', 'costumers.csv')
         
+        # Carregar interações únicas
+        interaction_data = load_interactions()
+        total_interacoes = len(interaction_data.get("interactions", {}))
+        
         # Definir os nomes das colunas
         column_names = ['Nome', 'Idade', 'CPF', 'Experiência > 3 anos', 'Estado Civil', 
                        'Tipo de Trabalho', 'Motivo', 'Filhos Menores', 'Renda Mensal', 
@@ -952,6 +997,17 @@ def load_data():
         if df is None:
             raise Exception("Não foi possível ler o arquivo com nenhum dos encodings tentados")
         
+        # Calcular métricas de interação
+        interacoes_excedentes = max(0, total_interacoes - 150)
+        custo_total = interacoes_excedentes * 2  # R$ 2,00 por interação excedente
+        
+        # Adicionar métricas ao contexto
+        df.attrs['metricas'] = {
+            'total_interacoes': total_interacoes,
+            'interacoes_excedentes': interacoes_excedentes,
+            'custo_total': custo_total
+        }
+        
         # Remover colunas não utilizadas
         df = df.drop(['Unnamed1', 'Unnamed2', 'CPF', 'Motivo'], axis=1)
         
@@ -963,10 +1019,6 @@ def load_data():
         text_columns = ['Nome', 'Estado Civil', 'Tipo de Trabalho', 'Filhos Menores', 'Experiência > 3 anos']
         for col in text_columns:
             df[col] = df[col].astype(str).apply(lambda x: x.strip())
-        
-        logger.info(f"Dados carregados com sucesso. Shape: {df.shape}")
-        logger.info(f"Colunas: {df.columns.tolist()}")
-        logger.info(f"Primeiras linhas:\n{df.head()}")
         
         return df
         
@@ -1227,6 +1279,13 @@ def dashboard():
     try:
         logger.info("Carregando dados para o dashboard")
         df = load_data()
+        
+        # Carregar dados de interações do JSON
+        interaction_data = load_interactions()
+        total_interacoes = len(interaction_data.get("interactions", {}))
+        interacoes_excedentes = max(0, total_interacoes - 150)
+        custo_total = interacoes_excedentes * 2
+
         if df.empty:
             logger.error("DataFrame vazio após carregar dados")
             return render_template(
@@ -1234,10 +1293,13 @@ def dashboard():
                 error="Não foi possível carregar os dados. Verifique o arquivo CSV.",
                 table="",
                 graphJSON="{}",
-                insights=""
+                insights="",
+                total_interacoes=total_interacoes,
+                interacoes_excedentes=interacoes_excedentes,
+                custo_total=custo_total
             )
 
-        # Criar tabela HTML com as 4 primeiras linhas
+        # Resto do código permanece igual, apenas usando as variáveis que definimos acima
         table = df.head(4).to_html(
             classes=['table', 'table-striped', 'table-hover'],
             index=False,
@@ -1247,8 +1309,17 @@ def dashboard():
             }
         )
         
-        # Gerar insights
+        # Gerar insights com as métricas de interação
         insights = generate_insights(df)
+        insights += f"""
+        <li><strong>Métricas de Interação:</strong>
+            <ul>
+                <li>Total de interações: {total_interacoes}</li>
+                <li>Interações excedentes: {interacoes_excedentes}</li>
+                <li>Custo adicional: R$ {custo_total:.2f}</li>
+            </ul>
+        </li>
+        """
         
         # Criar gráficos
         graphs = create_graphs(df)
@@ -1261,9 +1332,12 @@ def dashboard():
         has_more = total_rows > 4
 
         # Converter gráficos para JSON
-        import plotly.utils
         graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
-        logger.info("Dados preparados com sucesso para o template")
+        logger.info(f"Dados preparados com sucesso. Total de interações: {total_interacoes}")
+        
+        # Adicionar log para monitoramento de custos
+        if interacoes_excedentes > 0:
+            logger.warning(f"Atenção: {interacoes_excedentes} interações excedentes, gerando custo de R$ {custo_total:.2f}")
         
         return render_template(
             'dashboard.html',
@@ -1271,17 +1345,25 @@ def dashboard():
             graphJSON=graphJSON,
             insights=insights,
             total_rows=total_rows,
-            has_more=has_more
+            has_more=has_more,
+            total_interacoes=total_interacoes,
+            interacoes_excedentes=interacoes_excedentes,
+            custo_total=custo_total,
+            limite_gratuito=150
         )
         
     except Exception as e:
         logger.error(f"Erro ao renderizar dashboard: {str(e)}")
         return render_template(
             'dashboard.html',
-            error="Ocorreu um erro ao carregar o dashboard. Por favor, tente novamente.",
+            error="Ocorrer um erro ao carregar o dashboard. Por favor, tente novamente.",
             table="",
             graphJSON="{}",
-            insights=""
+            insights="",
+            total_interacoes=0,
+            interacoes_excedentes=0,
+            custo_total=0.0,
+            limite_gratuito=150
         )
 
 @app.route('/load_more_data')

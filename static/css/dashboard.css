@@ -177,3 +177,23 @@ body {
         font-size: 1.1rem;
     }
 }
+
+.card h2 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.card .text-warning {
+    color: #ffc107 !important;
+}
+
+.card .text-info {
+    color: #17a2b8 !important;
+}
+
+.card small {
+    font-size: 0.875rem;
+    display: block;
+    margin-top: 0.5rem;
+}

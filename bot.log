@@ -10597,3 +10597,90 @@ NameError: name 'ultima_pergunta' is not defined
 2025-02-12 21:14:03,616 - app - INFO - Criando gráfico de experiência
 2025-02-12 21:14:03,616 - app - INFO - Gráficos criados com sucesso
 2025-02-12 21:14:03,617 - app - INFO - Dados preparados com sucesso para o template
+2025-02-14 10:00:42,100 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-14 10:00:42,102 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-14 10:00:42,102 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-14 10:00:42,103 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-14 10:00:42,104 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-14 10:00:42,104 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-14 10:00:43,061 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-14 10:00:49,980 - app - INFO - Carregando dados para o dashboard
+2025-02-14 10:00:49,981 - app - INFO - Iniciando carregamento de dados
+2025-02-14 10:00:50,085 - app - INFO - Iniciando geração de insights
+2025-02-14 10:00:50,098 - app - INFO - Insights gerados com sucesso
+2025-02-14 10:00:50,099 - app - INFO - Iniciando criação dos gráficos
+2025-02-14 10:00:50,100 - app - INFO - Criando gráfico de idade
+2025-02-14 10:00:50,118 - app - INFO - Criando gráfico de renda
+2025-02-14 10:00:50,125 - app - INFO - Criando gráfico de tipo de trabalho
+2025-02-14 10:00:50,128 - app - INFO - Criando gráfico de filhos
+2025-02-14 10:00:50,130 - app - INFO - Criando gráfico de experiência
+2025-02-14 10:00:50,132 - app - INFO - Gráficos criados com sucesso
+2025-02-14 10:00:50,136 - app - INFO - Dados preparados com sucesso. Total de interações: 10
+2025-02-14 10:03:59,738 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-14 10:03:59,739 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-14 10:03:59,740 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-14 10:03:59,741 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-14 10:03:59,742 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-14 10:03:59,743 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-14 10:04:01,763 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-14 10:04:04,281 - app - INFO - Carregando dados para o dashboard
+2025-02-14 10:04:04,281 - app - INFO - Iniciando carregamento de dados
+2025-02-14 10:04:04,316 - app - INFO - Iniciando geração de insights
+2025-02-14 10:04:04,321 - app - INFO - Insights gerados com sucesso
+2025-02-14 10:04:04,321 - app - INFO - Iniciando criação dos gráficos
+2025-02-14 10:04:04,322 - app - INFO - Criando gráfico de idade
+2025-02-14 10:04:04,332 - app - INFO - Criando gráfico de renda
+2025-02-14 10:04:04,338 - app - INFO - Criando gráfico de tipo de trabalho
+2025-02-14 10:04:04,339 - app - INFO - Criando gráfico de filhos
+2025-02-14 10:04:04,343 - app - INFO - Criando gráfico de experiência
+2025-02-14 10:04:04,345 - app - INFO - Gráficos criados com sucesso
+2025-02-14 10:04:04,348 - app - INFO - Dados preparados com sucesso. Total de interações: 10
+2025-02-14 10:06:47,086 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-14 10:06:47,088 - apscheduler.scheduler - INFO - Added job "verificar_inatividade" to job store "default"
+2025-02-14 10:06:47,088 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-14 10:06:47,090 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-14 10:06:47,090 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-14 10:06:47,091 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-14 10:06:48,218 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-14 10:06:51,173 - app - INFO - Carregando dados para o dashboard
+2025-02-14 10:06:51,174 - app - INFO - Iniciando carregamento de dados
+2025-02-14 10:06:51,203 - app - INFO - Iniciando geração de insights
+2025-02-14 10:06:51,210 - app - INFO - Insights gerados com sucesso
+2025-02-14 10:06:51,211 - app - INFO - Iniciando criação dos gráficos
+2025-02-14 10:06:51,211 - app - INFO - Criando gráfico de idade
+2025-02-14 10:06:51,214 - app - INFO - Criando gráfico de renda
+2025-02-14 10:06:51,224 - app - INFO - Criando gráfico de tipo de trabalho
+2025-02-14 10:06:51,225 - app - INFO - Criando gráfico de filhos
+2025-02-14 10:06:51,226 - app - INFO - Criando gráfico de experiência
+2025-02-14 10:06:51,228 - app - INFO - Gráficos criados com sucesso
+2025-02-14 10:06:51,229 - app - INFO - Dados preparados com sucesso. Total de interações: 0
+2025-02-14 10:06:53,262 - app - INFO - Carregando dados para o dashboard
+2025-02-14 10:06:53,262 - app - INFO - Iniciando carregamento de dados
+2025-02-14 10:06:53,278 - app - INFO - Iniciando geração de insights
+2025-02-14 10:06:53,286 - app - INFO - Insights gerados com sucesso
+2025-02-14 10:06:53,288 - app - INFO - Iniciando criação dos gráficos
+2025-02-14 10:06:53,289 - app - INFO - Criando gráfico de idade
+2025-02-14 10:06:53,297 - app - INFO - Criando gráfico de renda
+2025-02-14 10:06:53,301 - app - INFO - Criando gráfico de tipo de trabalho
+2025-02-14 10:06:53,303 - app - INFO - Criando gráfico de filhos
+2025-02-14 10:06:53,304 - app - INFO - Criando gráfico de experiência
+2025-02-14 10:06:53,306 - app - INFO - Gráficos criados com sucesso
+2025-02-14 10:06:53,308 - app - INFO - Dados preparados com sucesso. Total de interações: 0

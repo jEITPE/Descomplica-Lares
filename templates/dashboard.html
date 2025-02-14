@@ -20,6 +20,49 @@
     </div>
 </div>
 
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Total de Interações</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-center w-100">
+                        <h2 class="mb-0" style="color: var(--primary-color)">{{ total_interacoes }}</h2>
+                        <p class="text-muted mb-0">Interações Totais</p>
+                        {% if interacoes_excedentes > 0 %}
+                        <small class="text-warning">
+                            ({{ interacoes_excedentes }} acima do limite gratuito)
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Custos de Interação</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-center w-100">
+                        <h2 class="mb-0" style="color: var(--secondary-color)">
+                            R$ {{ "%.2f"|format(custo_total) }}
+                        </h2>
+                        <p class="text-muted mb-0">Custo Total</p>
+                        <small class="text-info">
+                            R$ 2,00 por interação após 150
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6">
         <div class="card h-100">
