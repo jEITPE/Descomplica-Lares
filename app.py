@@ -581,25 +581,14 @@ def save_interaction(phone_number):
         return 0
 
 @app.route('/bot', methods=['POST'])
+@app.route('/bot', methods=['POST'])
 def bot():
     try:
         from_whatsapp_number = request.values.get('From')
         
-        # Adicionar verificação de última mensagem para evitar duplicação
-        if from_whatsapp_number in historico_clientes:
-            ultima_msg = historico_clientes[from_whatsapp_number].get("ultima_mensagem")
-            tempo_atual = time.time()
-            ultima_interacao = historico_clientes[from_whatsapp_number].get("ultima_interacao", 0)
-            
-            # Se a última mensagem foi há menos de 5 segundos, ignora
-            if (tempo_atual - ultima_interacao) < 5:
-                logger.info(f"Ignorando mensagem duplicada de {from_whatsapp_number}")
-                return "OK", 200
-
         # Verificar se é um arquivo ou áudio
         if 'MediaContentType0' in request.values:
             media_type = request.values.get('MediaContentType0', '')
-            from_whatsapp_number = request.values.get('From', '')
             
             # Se for um áudio, enviar mensagem informando que não suporta
             if media_type.startswith('audio/'):
@@ -611,9 +600,7 @@ def bot():
                     )
                 except Exception as e:
                     logger.error(f"Erro ao enviar mensagem sobre áudio: {str(e)}")
-            
-            # Para qualquer tipo de mídia, continuamos o fluxo normal
-            # mas não processamos o conteúdo da mídia
+                return "OK", 200
 
         # Continua com o fluxo normal
         incoming_msg = request.values.get('Body', '').strip()
@@ -623,63 +610,39 @@ def bot():
         
         tempo_atual = time.time()
 
-        # Atualizar histórico com controle de duplicação
-        if from_whatsapp_number not in historico_clientes:
+        # Verificação de duplicação
+        if from_whatsapp_number in historico_clientes:
+            ultima_interacao = historico_clientes[from_whatsapp_number].get("ultima_interacao", 0)
+            if (tempo_atual - ultima_interacao) < 5:
+                logger.info(f"Ignorando mensagem duplicada de {from_whatsapp_number}")
+                return "OK", 200
+            
+            # Atualiza histórico para usuário existente
+            historico_clientes[from_whatsapp_number].update({
+                "ultima_interacao": tempo_atual,
+                "ultima_mensagem": incoming_msg
+            })
+            historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+        else:
+            # Inicialização para novo usuário
             historico_clientes[from_whatsapp_number] = {
-                "historico": [],
+                "historico": [incoming_msg],
                 "ultima_interacao": tempo_atual,
                 "ultima_mensagem": incoming_msg
             }
-            # Apenas envia mensagem de boas-vindas na primeira interação
+            conversation_contexts[from_whatsapp_number] = ConversationContext()
+            cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
+            
+            # Envia mensagem de boas-vindas apenas para novos usuários
             client.messages.create(
                 from_='whatsapp:+15557356571',
                 to=from_whatsapp_number,
                 body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
             )
-        else:
-            historico_clientes[from_whatsapp_number].update({
-                "ultima_interacao": tempo_atual,
-                "ultima_mensagem": incoming_msg
-            })
-
-        if from_whatsapp_number not in conversation_contexts:
-            conversation_contexts[from_whatsapp_number] = ConversationContext()
-        
-        context = conversation_contexts[from_whatsapp_number]
-        incoming_msg = request.values.get('Body', '').strip()
-        if not incoming_msg:
-            logger.info('Mensagem vazia recebida; retornando OK sem processamento adicional.')
             return "OK", 200
-        
-        tempo_atual = time.time()
 
-        # Controle de histórico
-        if from_whatsapp_number not in historico_clientes:
-            historico_clientes[from_whatsapp_number] = {
-                "historico": [],
-                "ultima_interacao": tempo_atual
-            }
-        else:
-            historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
-
-        # Histórico
-        historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+        # Obtém o histórico atualizado
         historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
-
-        if from_whatsapp_number not in cliente_estado:
-            cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
-            try:
-                logger.info(f"Enviando mensagem de boas-vindas para {from_whatsapp_number}")
-                message = client.messages.create(
-                    from_='whatsapp:+15557356571',
-                    to=from_whatsapp_number,
-                    body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
-                )
-                logger.info(f"Mensagem enviada com sucesso. SID: {message.sid}")
-            except Exception as e:
-                logger.error(f"Erro ao enviar mensagem: {str(e)}")
-            return "OK", 200
-
         estado_cliente = cliente_estado[from_whatsapp_number]
 
         logger.info(f"Mensagem recebida de {from_whatsapp_number}: {incoming_msg}")
@@ -1015,11 +978,11 @@ def process_with_langchain(incoming_msg, historico):
         response = conversation_chain.invoke({
             "message": message,
             "historico": historico_str,
-            "markdown_instrucoes": markdown_instrucoes,
-            "configuracoes": configuracoes,
+            "markdown_instrucoes": markdown_instrucoes or "",
+            "configuracoes": configuracoes or {}
         })
         
-        return response
+        return str(response)
     except Exception as e:
         logger.error(f"Erro no processamento Langchain: {str(e)}")
         return "Desculpe, ocorreu um erro no processamento da sua mensagem. Como posso te ajudar?"
