@@ -303,17 +303,26 @@ scheduler = BackgroundScheduler()
 # Função para verificar clientes inativos
 def verificar_inatividade():
     tempo_atual = time.time()
+    clientes_notificados = set()  # Conjunto para controlar notificações enviadas
+    
     for numero, dados in list(historico_clientes.items()):
         if tempo_atual - dados["ultima_interacao"] > TEMPO_EXPIRACAO:
-            client.messages.create(
-                from_='whatsapp:+15557356571',
-                to=numero,
-                body="Seu atendimento foi finalizado! 😪\nCaso queira retomar o contato, *basta enviar uma nova mensagem.*"
-            )
-            del historico_clientes[numero]
+            # Verifica se já notificou este cliente
+            if numero not in clientes_notificados:
+                try:
+                    client.messages.create(
+                        from_='whatsapp:+15557356571',
+                        to=numero,
+                        body="Seu atendimento foi finalizado! 😪\nCaso queira retomar o contato, *basta enviar uma nova mensagem.*"
+                    )
+                    clientes_notificados.add(numero)  # Marca como notificado
+                    del historico_clientes[numero]
+                    logger.info(f"Cliente {numero} notificado de inatividade e removido do histórico")
+                except Exception as e:
+                    logger.error(f"Erro ao enviar notificação de inatividade para {numero}: {str(e)}")
 
-# Inicia o agendador
-scheduler.add_job(verificar_inatividade, 'interval', seconds=1800)
+# Ajuste o agendador para executar em intervalos maiores
+scheduler.add_job(verificar_inatividade, 'interval', minutes=30)  # Mudado para 30 minutos
 scheduler.start()
 
 def salvar_resposta(estado_cliente, campo, valor):
@@ -574,6 +583,19 @@ def save_interaction(phone_number):
 @app.route('/bot', methods=['POST'])
 def bot():
     try:
+        from_whatsapp_number = request.values.get('From')
+        
+        # Adicionar verificação de última mensagem para evitar duplicação
+        if from_whatsapp_number in historico_clientes:
+            ultima_msg = historico_clientes[from_whatsapp_number].get("ultima_mensagem")
+            tempo_atual = time.time()
+            ultima_interacao = historico_clientes[from_whatsapp_number].get("ultima_interacao", 0)
+            
+            # Se a última mensagem foi há menos de 5 segundos, ignora
+            if (tempo_atual - ultima_interacao) < 5:
+                logger.info(f"Ignorando mensagem duplicada de {from_whatsapp_number}")
+                return "OK", 200
+
         # Verificar se é um arquivo ou áudio
         if 'MediaContentType0' in request.values:
             media_type = request.values.get('MediaContentType0', '')
@@ -594,12 +616,32 @@ def bot():
             # mas não processamos o conteúdo da mídia
 
         # Continua com o fluxo normal
-        from_whatsapp_number = request.values.get('From')
+        incoming_msg = request.values.get('Body', '').strip()
+        if not incoming_msg:
+            logger.info('Mensagem vazia recebida; retornando OK sem processamento adicional.')
+            return "OK", 200
         
-        # Registra a interação e obtém o total atualizado
-        total_interacoes = save_interaction(from_whatsapp_number)
-        logger.info(f"Nova interação registrada. Total: {total_interacoes}")
-        
+        tempo_atual = time.time()
+
+        # Atualizar histórico com controle de duplicação
+        if from_whatsapp_number not in historico_clientes:
+            historico_clientes[from_whatsapp_number] = {
+                "historico": [],
+                "ultima_interacao": tempo_atual,
+                "ultima_mensagem": incoming_msg
+            }
+            # Apenas envia mensagem de boas-vindas na primeira interação
+            client.messages.create(
+                from_='whatsapp:+15557356571',
+                to=from_whatsapp_number,
+                body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
+            )
+        else:
+            historico_clientes[from_whatsapp_number].update({
+                "ultima_interacao": tempo_atual,
+                "ultima_mensagem": incoming_msg
+            })
+
         if from_whatsapp_number not in conversation_contexts:
             conversation_contexts[from_whatsapp_number] = ConversationContext()
         
@@ -668,12 +710,7 @@ def bot():
                 )
                 return "OK", 200
             elif intent_response == "CONTINUE":
-                response = conversation_chain.invoke({
-                    "message": incoming_msg,
-                    "historico": historico,
-                    "markdown_instrucoes": markdown_instrucoes,
-                    "configuracoes": configuracoes,
-                })
+                response = process_with_langchain(incoming_msg, historico)
 
                 client.messages.create(
                     from_='whatsapp:+15557356571',
@@ -968,6 +1005,24 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
         logger.error(f"Erro no processamento do bot: {str(e)}")
         return "OK", 200  # Sempre retorna OK mesmo em caso de erro
 
+def process_with_langchain(incoming_msg, historico):
+    try:
+        # Garante que a mensagem é uma string
+        message = str(incoming_msg) if incoming_msg else ""
+        historico_str = str(historico) if historico else ""
+        
+        # Processa com o Langchain
+        response = conversation_chain.invoke({
+            "message": message,
+            "historico": historico_str,
+            "markdown_instrucoes": markdown_instrucoes,
+            "configuracoes": configuracoes,
+        })
+        
+        return response
+    except Exception as e:
+        logger.error(f"Erro no processamento Langchain: {str(e)}")
+        return "Desculpe, ocorreu um erro no processamento da sua mensagem. Como posso te ajudar?"
 
 def load_data():
     try:
@@ -1389,6 +1444,18 @@ def load_more_data():
 @app.route('/')
 def index():
     return "Funcionando 2025!"
+
+def limpar_historico_antigo():
+    tempo_atual = time.time()
+    tempo_limite = 24 * 60 * 60  # 24 horas
+    
+    for numero in list(historico_clientes.keys()):
+        if tempo_atual - historico_clientes[numero]["ultima_interacao"] > tempo_limite:
+            del historico_clientes[numero]
+            logger.info(f"Histórico do cliente {numero} removido após 24h de inatividade")
+
+# Adicione ao scheduler
+scheduler.add_job(limpar_historico_antigo, 'interval', hours=24)
 
 if __name__ != "__main__":
     gunicorn_app = app
