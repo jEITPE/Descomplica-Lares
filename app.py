@@ -301,29 +301,17 @@ TEMPO_EXPIRACAO = 1800
 scheduler = BackgroundScheduler()
 
 # Função para verificar clientes inativos
-def verificar_inatividade():
+def limpar_historico_antigo():
     tempo_atual = time.time()
-    clientes_notificados = set()  # Conjunto para controlar notificações enviadas
+    tempo_limite = 24 * 60 * 60  # 24 horas
     
-    for numero, dados in list(historico_clientes.items()):
-        if tempo_atual - dados["ultima_interacao"] > TEMPO_EXPIRACAO:
-            # Verifica se já notificou este cliente
-            if numero not in clientes_notificados:
-                try:
-                    client.messages.create(
-                        from_='whatsapp:+15557356571',
-                        to=numero,
-                        body="Seu atendimento foi finalizado! 😪\nCaso queira retomar o contato, *basta enviar uma nova mensagem.*"
-                    )
-                    clientes_notificados.add(numero)  # Marca como notificado
-                    del historico_clientes[numero]
-                    logger.info(f"Cliente {numero} notificado de inatividade e removido do histórico")
-                except Exception as e:
-                    logger.error(f"Erro ao enviar notificação de inatividade para {numero}: {str(e)}")
+    for numero in list(historico_clientes.keys()):
+        if tempo_atual - historico_clientes[numero]["ultima_interacao"] > tempo_limite:
+            del historico_clientes[numero]
+            logger.info(f"Histórico do cliente {numero} removido após 24h de inatividade")
 
-# Ajuste o agendador para executar em intervalos maiores
-scheduler.add_job(verificar_inatividade, 'interval', minutes=30)  # Mudado para 30 minutos
-scheduler.start()
+# Adicione ao scheduler
+scheduler.add_job(limpar_historico_antigo, 'interval', hours=24)
 
 def salvar_resposta(estado_cliente, campo, valor):
     if "respostas" not in estado_cliente:
@@ -1408,17 +1396,7 @@ def load_more_data():
 def index():
     return "Funcionando 2025!"
 
-def limpar_historico_antigo():
-    tempo_atual = time.time()
-    tempo_limite = 24 * 60 * 60  # 24 horas
-    
-    for numero in list(historico_clientes.keys()):
-        if tempo_atual - historico_clientes[numero]["ultima_interacao"] > tempo_limite:
-            del historico_clientes[numero]
-            logger.info(f"Histórico do cliente {numero} removido após 24h de inatividade")
-
-# Adicione ao scheduler
-scheduler.add_job(limpar_historico_antigo, 'interval', hours=24)
+scheduler.start()
 
 if __name__ != "__main__":
     gunicorn_app = app
