@@ -861,20 +861,8 @@ def bot():
                     to=from_whatsapp_number,
                     content_sid=template_eat
                 )
-                    
-                    if result is None:
-                        # Se falhar, envia mensagem de texto como fallback
-                        send_whatsapp_message(
-                            to=from_whatsapp_number,
-                            body="Por favor, selecione uma das opções:\n1. Informações sobre a Descomplica\n2. Marcar Reunião\n3. Agendar Visita\n4. Análise de Crédito"
-                        )
                 except Exception as e:
                     logger.error(f"Erro ao processar intenção PASS_BUTTON: {str(e)}")
-                    # Fallback para mensagem texto em caso de erro
-                    send_whatsapp_message(
-                        to=from_whatsapp_number,
-                        body="Por favor, selecione uma das opções disponíveis para continuar."
-                    )
             elif intent_response == "CONTINUE":
                 # Se não for uma intenção específica, processa com a Lola
                 try:
