@@ -280,7 +280,7 @@ prompt_fallback = PromptTemplate(
     ### Histórico recente:
     {historico}
 
-    Responda apenas com "FALLBACK" ou "CONTINUE_FLOW".
+    Responda apenas com "FALLBACK" ou "CONTINUE_FLOW"
     """
 )
 fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
