@@ -150,7 +150,7 @@ Este projeto está sob a licença [MIT](LICENSE).
 
 ## 📧 Contato
 
-Para suporte ou dúvidas sobre o projeto, entre em contato através de [seu-email@email.com].
+Para suporte ou dúvidas sobre o projeto, entre em contato através de [descomplicalares@gmail.com].
 
 ---
 Desenvolvido com 💜 pela equipe Descomplica Lares

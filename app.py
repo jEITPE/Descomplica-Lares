@@ -192,7 +192,7 @@ prompt_lola = PromptTemplate(
     Responda as perguntas normalmente, sem 'Lola:'.
     """
 )
-conversation_chain = llm | prompt_lola
+conversation_chain = LLMChain(llm=llm, prompt=prompt_lola)
 
 
 # Prompt para Rubens
@@ -221,7 +221,7 @@ prompt_rubens = PromptTemplate(
     Cliente: {message}
     """
 )
-intention_chain = llm | prompt_rubens
+intention_chain = LLMChain(llm=llm, prompt=prompt_rubens)
 
 # Prompt Fallback
 prompt_fallback = PromptTemplate(
@@ -272,7 +272,7 @@ prompt_fallback = PromptTemplate(
     Responda apenas com "FALLBACK" ou "CONTINUE_FLOW".
     """
 )
-fallback_chain = llm | prompt_fallback
+fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
 
 # Mapeamento dos IDs dos botões
 BUTTON_IDS = {
@@ -650,7 +650,7 @@ def bot():
             return "OK", 200
 
         if estado_cliente["etapa"] == "inicial":
-            intent_response = intention_chain.invoke({"message": incoming_msg}).strip()
+            intent_response = intention_chain.run({"message": incoming_msg}).strip()
             logger.info(f"Intenção detectada: {intent_response}")
             if intent_response == "PASS_BUTTON":
                 estado_cliente["etapa"] = "aguardando_opcao"
@@ -963,7 +963,7 @@ def process_with_langchain(incoming_msg, historico):
         historico_str = str(historico) if historico else ""
         
         # Processa com o Langchain
-        response = conversation_chain.invoke({
+        response = conversation_chain.run({
             "message": message,
             "historico": historico_str,
             "markdown_instrucoes": markdown_instrucoes or "",
