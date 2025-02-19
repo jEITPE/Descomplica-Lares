@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Custos de API - Descomplica Lares</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .cost-card {
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        .warning {
+            color: #dc3545;
+            font-weight: 600;
+            padding: 8px;
+            background-color: #fff3f3;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .cost-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #0d6efd;
+        }
+        .metric-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .total-cost {
+            font-size: 32px;
+            font-weight: 700;
+            color: #198754;
+        }
+        .api-section {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1 class="display-5 mb-3">Monitoramento de Custos</h1>
+            <p class="text-muted">Descomplica Lares - Controle de APIs</p>
+        </div>
+        
+        <div class="row">
+            <!-- Uso Diário -->
+            <div class="col-md-6">
+                <div class="card cost-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Uso Diário</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="api-section">
+                            <h6 class="mb-3">OpenAI (GPT-3.5)</h6>
+                            <div class="metric-item">
+                                <span class="metric-label">Tokens:</span>
+                                <span class="float-end">{{ daily_usage.get('tokens', 0) }}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Chamadas:</span>
+                                <span class="float-end">{{ daily_usage.get('calls', 0) }}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Custo:</span>
+                                <span class="float-end cost-value">${{ "%.2f"|format(daily_usage.get('cost', 0)) }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="api-section">
+                            <h6 class="mb-3">Twilio</h6>
+                            <div class="metric-item">
+                                <span class="metric-label">Mensagens:</span>
+                                <span class="float-end">{{ daily_usage.get('messages', 0) }}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Custo:</span>
+                                <span class="float-end cost-value">${{ "%.2f"|format(daily_usage.get('twilio_cost', 0)) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Uso Mensal -->
+            <div class="col-md-6">
+                <div class="card cost-card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Uso Mensal</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="api-section">
+                            <h6 class="mb-3">OpenAI (GPT-3.5)</h6>
+                            <div class="metric-item">
+                                <span class="metric-label">Tokens:</span>
+                                <span class="float-end">{{ monthly_usage.get('tokens', 0) }}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Chamadas:</span>
+                                <span class="float-end">{{ monthly_usage.get('calls', 0) }}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Custo:</span>
+                                <span class="float-end cost-value">${{ "%.2f"|format(monthly_usage.get('cost', 0)) }}</span>
+                            </div>
+                            {% if monthly_usage.get('cost', 0) > 50 %}
+                            <div class="warning">
+                                ⚠️ Alerta: Custo mensal acima de $50!
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="api-section">
+                            <h6 class="mb-3">Twilio</h6>
+                            <div class="metric-item">
+                                <span class="metric-label">Mensagens:</span>
+                                <span class="float-end">{{ monthly_usage.get('messages', 0) }}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Custo:</span>
+                                <span class="float-end cost-value">${{ "%.2f"|format(monthly_usage.get('twilio_cost', 0)) }}</span>
+                            </div>
+                            {% if monthly_usage.get('messages', 0) > 1000 %}
+                            <div class="warning">
+                                ⚠️ Alerta: Mais de 1000 mensagens este mês!
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Custo Total -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card cost-card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Custo Total Mensal</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <span class="total-cost">${{ "%.2f"|format(monthly_usage.get('cost', 0) + monthly_usage.get('twilio_cost', 0)) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
