@@ -845,48 +845,76 @@ def bot():
 
         # Processamento de intenções
         try:
-            # Primeiro verifica com o Rubens (intention_chain)
-            intent_response = intention_chain.invoke({
-                "message": incoming_msg
-            })
-            intent_response = str(intent_response.get('text', '')).strip()
-            
-            logger.info(f"Intenção detectada: {intent_response}")
-            
-            if intent_response == "PASS_BUTTON":
-                estado_cliente["etapa"] = "aguardando_opcao"
-                try:
-                    # Tenta enviar o template
-                    result = send_whatsapp_message(
-                    to=from_whatsapp_number,
-                    content_sid=template_eat
-                )
-                except Exception as e:
-                    logger.error(f"Erro ao processar intenção PASS_BUTTON: {str(e)}")
-            elif intent_response == "CONTINUE":
-                # Se não for uma intenção específica, processa com a Lola
-                try:
-                    response = process_with_langchain(incoming_msg, historico)
-                    if response:
-                        # Envia a resposta da Lola
-                        result = send_whatsapp_message(
+            # Se já estiver em um questionário, não processa intenções
+            if estado_cliente["etapa"].startswith("questionario_"):
+                if estado_cliente["etapa"].startswith("questionario_reuniao"):
+                    current_field = estado_cliente["etapa"].replace("questionario_reuniao_", "")
+                    return process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field, historico, "reuniao")
+                elif estado_cliente["etapa"].startswith("questionario_visita"):
+                    current_field = estado_cliente["etapa"].replace("questionario_visita_", "")
+                    return process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field, historico, "visita")
+            else:
+                # Primeiro verifica com o Rubens (intention_chain)
+                intent_response = intention_chain.invoke({
+                    "message": incoming_msg
+                })
+                intent_response = str(intent_response.get('text', '')).strip()
+                
+                logger.info(f"Intenção detectada: {intent_response}")
+                
+                if intent_response == "PASS_BUTTON":
+                    estado_cliente["etapa"] = "aguardando_opcao"
+                    try:
+                        # Envia os templates na ordem correta
+                        client.messages.create(
+                            from_='whatsapp:+15557356571',
                             to=from_whatsapp_number,
-                            body=str(response)
+                            content_sid=template_iap
                         )
-                        
-                        if result is not None:
-                            # Aguarda um pouco antes de enviar a mensagem adicional
-                            time.sleep(1.5)
-                            send_whatsapp_message(
+                        sleep(1.5)
+                        client.messages.create(
+                            from_='whatsapp:+15557356571',
+                            to=from_whatsapp_number,
+                            content_sid=template_pe
+                        )
+                        sleep(1.5)
+                        client.messages.create(
+                            from_='whatsapp:+15557356571',
+                            to=from_whatsapp_number,
+                            content_sid=template_loop
+                        )
+                    except Exception as e:
+                        logger.error(f"Erro ao enviar templates: {str(e)}")
+                        # Fallback apenas em caso de erro
+                        client.messages.create(
+                            from_='whatsapp:+15557356571',
+                            to=from_whatsapp_number,
+                            body="Por favor, selecione uma das opções:\n1. Informações sobre a Descomplica\n2. Marcar Reunião\n3. Agendar Visita\n4. Análise de Crédito"
+                        )
+                elif intent_response == "CONTINUE":
+                    # Se não for uma intenção específica, processa com a Lola
+                    try:
+                        response = process_with_langchain(incoming_msg, historico)
+                        if response:
+                            # Envia a resposta da Lola
+                            result = send_whatsapp_message(
                                 to=from_whatsapp_number,
-                                body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
+                                body=str(response)
                             )
-                except Exception as e:
-                    logger.error(f"Erro ao processar resposta da Lola: {str(e)}")
-                    send_whatsapp_message(
-                        to=from_whatsapp_number,
-                        body="Desculpe, tive um problema ao processar sua mensagem. Pode tentar novamente?"
-                    )
+                            
+                            if result is not None:
+                                # Aguarda um pouco antes de enviar a mensagem adicional
+                                time.sleep(1.5)
+                                send_whatsapp_message(
+                                    to=from_whatsapp_number,
+                                    body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
+                                )
+                    except Exception as e:
+                        logger.error(f"Erro ao processar resposta da Lola: {str(e)}")
+                        send_whatsapp_message(
+                            to=from_whatsapp_number,
+                            body="Desculpe, tive um problema ao processar sua mensagem. Pode tentar novamente?"
+                        )
         except Exception as e:
             logger.error(f"Erro no processamento de intenção: {str(e)}")
             send_whatsapp_message(

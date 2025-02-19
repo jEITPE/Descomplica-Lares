@@ -217,67 +217,57 @@ class QuestionnaireAI:
             print(f"Erro ao buscar resposta: {e}")
             return None
 
-    def process_message(self, message):
-        """Processa a mensagem do usuário e retorna uma resposta apropriada"""
-        return self.process_message_new(message)
-
-    def process_message_new(self, message):
+    def process_message(self, message, current_field, historico=""):
         """Processa a mensagem do usuário e retorna uma resposta apropriada"""
         try:
-            # Adiciona a mensagem ao histórico
-            self.conversation_history.append({"role": "user", "content": message})
+            # Verifica se é uma pergunta ou dúvida usando o fallback_chain
+            fallback_response = self.fallback_chain.invoke({
+                "message": message,
+                "current_question": self.questions[current_field]["pergunta"],
+                "context": historico
+            })
+            fallback_result = str(fallback_response.get('text', '')).strip()
             
-            # Lógica básica de resposta
-            message = message.lower().strip()
+            if fallback_result == "FALLBACK":
+                # Se for uma dúvida, busca resposta na base de conhecimento
+                answer = self.get_answer_from_knowledge_base(message, current_field)
+                if answer:
+                    return {
+                        "type": "fallback",
+                        "message": answer
+                    }
+                else:
+                    return {
+                        "type": "fallback",
+                        "message": "Desculpe, não entendi sua dúvida. Pode reformular? 😊"
+                    }
             
-            # Perguntas sobre localização
-            if any(word in message for word in ["onde", "local", "endereço", "localizado", "fica"]):
-                response = """Nossa unidade está localizada em:
-                
-🏢 Rua Voluntários da Pátria, 654 - Sala 1208
-Santana, São Paulo - SP
-CEP: 02010-000
-
-Próximo ao metrô Santana! 🚇"""
+            # Se não for fallback, valida a resposta
+            if current_field in self.questions and "validacao" in self.questions[current_field]:
+                is_valid = self.questions[current_field]["validacao"](message)
+                if not is_valid:
+                    return {
+                        "type": "error",
+                        "message": self.questions[current_field]["erro"]
+                    }
             
-            # Perguntas sobre horário de funcionamento
-            elif any(word in message for word in ["horário", "hora", "funcionamento", "aberto"]):
-                response = """Nosso horário de atendimento é:
-
-⏰ Segunda a Sexta: 09h às 18h
-⏰ Sábado: 09h às 13h
-
-Agende uma visita ou reunião online! 😊"""
-            
-            # Perguntas sobre financiamento
-            elif any(word in message for word in ["financiamento", "parcela", "valor", "preço"]):
-                response = """Trabalhamos com financiamento pela Caixa Econômica Federal! 🏦
-
-Para simular valores e condições, precisamos de algumas informações:
-1. Renda familiar
-2. Valor de entrada disponível
-3. Tipo de imóvel desejado
-
-Podemos agendar uma reunião para fazer essa simulação? 📊"""
-            
-            # Resposta padrão
-            else:
-                response = """Posso te ajudar com:
-
-1. Informações sobre nossos imóveis 🏠
-2. Simulação de financiamento 💰
-3. Agendamento de visitas 📅
-4. Documentação necessária 📄
-
-Como posso te ajudar?"""
-            
-            # Adiciona a resposta ao histórico
-            self.conversation_history.append({"role": "assistant", "content": response})
-            
-            return response
+            # Se passou pela validação, retorna sucesso
+            return {
+                "type": "success",
+                "field": current_field,
+                "value": message
+            }
             
         except Exception as e:
-            return "Desculpe, tive um problema ao processar sua mensagem. Pode tentar novamente?"
+            print(f"Erro ao processar mensagem: {e}")
+            return {
+                "type": "error",
+                "message": "Desculpe, tive um problema ao processar sua mensagem. Pode tentar novamente?"
+            }
+
+    def process_message_new(self, message):
+        """Método legado mantido para compatibilidade"""
+        return self.process_message(message, "geral", "")
         
     def get_first_question(self, tipo_questionario="reuniao"):
         """Retorna a primeira pergunta do questionário"""
