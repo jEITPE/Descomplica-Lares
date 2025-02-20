@@ -33,6 +33,7 @@ from flask import render_template
 import random
 from datetime import datetime, timedelta
 
+
 # Configuração do logger
 logging.basicConfig(
     level=logging.INFO,
@@ -44,10 +45,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Carregar variáveis de ambiente
-load_dotenv()
-
-# Configuração do Flask
 app = Flask(__name__, static_url_path='', static_folder='static')
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['UPLOAD_FOLDER'] = os.path.join('data', 'treinamento_ia', 'csv')
@@ -62,6 +59,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Carrega as variáveis de ambiente
+load_dotenv()
 
 account_sid = os.getenv("ACCOUNT_SID")
 auth_token = os.getenv("AUTH_TOKEN")
@@ -95,17 +95,6 @@ llm = ChatOpenAI(
     },
     openai_api_key=api_key
 )
-
-# Cache para respostas do LLM para evitar chamadas duplicadas
-llm_cache = {}
-
-def get_cached_response(cache_key, chain_func):
-    """Função helper para cache de respostas do LLM"""
-    if cache_key in llm_cache:
-        return llm_cache[cache_key]
-    response = chain_func()
-    llm_cache[cache_key] = response
-    return response
 
 # Função para carregar e processar o arquivo Markdown
 def carregar_markdown(markdown_path):
@@ -143,11 +132,12 @@ except Exception as e:
     logger.warning(f"Erro ao carregar JSON: {e}")
     configuracoes = None
 
+
 # Prompt para Lola
 prompt_lola = PromptTemplate(
     input_variables=["message", "markdown_instrucoes", "configuracoes", "historico"],
     template="""
-    Você é a Lare, assistente virtual da imobiliária Descomplica Lares. 
+    Você é a Lora, assistente virtual da imobiliária Descomplica Lares. 
     Você tem uma abordagem simples e clara. Textos muito grande não agradam os seus clientes, então seja o mais direta possível.
     Responda somente com base nas instruções fornecidas. Se a pergunta for fora do escopo, diga algo como: 
     "Mil perdões, eu não tenho certeza da resposta! 😓\nSe precisar marcar uma conversa com um corretor, digite *atendimento*"
@@ -182,8 +172,8 @@ prompt_lola = PromptTemplate(
     2. Se o cliente fizer referência a uma pergunta anterior, revise o {historico} e, se aplicável, conecte a resposta com o que já foi discutido. 
     3. Caso o cliente peça um resumo, gere um resumo curto com base no {historico} fornecido.
     4. Sempre verifique se as instruções fornecidas no markdown têm prioridade sobre o {historico}, e só utilize o {historico} como suporte adicional. 
-    5. Nunca forneça informações que não estão nas instruções {markdown_instrucoes} e {configuracoes} ou no {historico}.
-
+    5. Nunca forneça informações que não estão nas instruções ou no {historico}.
+    6. Se o histórico tiver sido reiniciado, e o cliente voltar, ou algo desse tipo, responda com: "Desculpe, mas não tenho um histórico recente da nossa conversa. Posso te ajudar com alguma dúvida específica? 😊"
     
          
     Use emojis, para dar o sentimento de simpatia!
@@ -204,7 +194,6 @@ prompt_lola = PromptTemplate(
     """
 )
 conversation_chain = LLMChain(llm=llm, prompt=prompt_lola)
-
 
 # Prompt para Rubens
 prompt_rubens = PromptTemplate(
@@ -280,7 +269,7 @@ prompt_fallback = PromptTemplate(
     ### Histórico recente:
     {historico}
 
-    Responda apenas com "FALLBACK" ou "CONTINUE_FLOW"
+    Responda apenas com "FALLBACK" ou "CONTINUE_FLOW".
     """
 )
 fallback_chain = LLMChain(llm=llm, prompt=prompt_fallback)
@@ -306,7 +295,7 @@ ultima_pergunta = {}
 aguardando_confirmacao = {}
 
 # Tempo limite para expiração do histórico
-TEMPO_EXPIRACAO = 1800
+TEMPO_EXPIRACAO = 3600
 
 # Agendador para verificar inatividade
 scheduler = BackgroundScheduler()
@@ -336,8 +325,7 @@ def validar_horario(horario):
 # Função para salvar as respostas no CSV
 def salvar_no_csv(estado_cliente):
     file_path = csv_file
-    headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", 
-             "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
+    headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
 
     data = {
         "nome": estado_cliente["respostas"].get("nome", ""),
@@ -403,7 +391,15 @@ def is_questionnaire_response(message, stage):
         "questionario_reuniao_nome": lambda m: len(m.split()) >= 2,
         "questionario_reuniao_idade": lambda m: m.replace(" ", "").isdigit(),
         "questionario_reuniao_cpf": lambda m: bool(re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", m)),
-        # Adicione outras validações conforme necessário
+        "questionario_reuniao_renda_bruta": lambda m: bool(re.match(r"R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?", m)),
+        "questionario_reuniao_dia": lambda m: bool(re.match(r"^\d{2}/\d{2}/\d{4}$", m)),
+        "questionario_reuniao_horario": lambda m: validar_horario(m),
+        "questionario_visita_nome": lambda m: len(m.split()) >= 2,
+        "questionario_visita_idade": lambda m: m.replace(" ", "").isdigit(),
+        "questionario_visita_cpf": lambda m: bool(re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", m)),
+        "questionario_visita_renda_bruta": lambda m: bool(re.match(r"R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?", m)),
+        "questionario_visita_dia": lambda m: bool(re.match(r"^\d{2}/\d{2}/\d{4}$", m)),
+        "questionario_visita_horario": lambda m: validar_horario(m)
     }
     
     if stage in questionnaire_stages:
@@ -662,93 +658,6 @@ class APIMonitor:
 # Inicializa o monitor de API
 api_monitor = APIMonitor()
 
-# Modifica a função process_with_langchain para incluir monitoramento
-def process_with_langchain(incoming_msg, historico):
-    try:
-        message = str(incoming_msg) if incoming_msg else ""
-        historico_str = str(historico) if historico else ""
-        
-        # Corrigindo o método de invocação
-        response = conversation_chain.invoke({
-            "message": message,
-            "historico": historico_str,
-            "markdown_instrucoes": str(markdown_instrucoes or ""),
-            "configuracoes": str(configuracoes or "{}")
-        })
-        
-        response = str(response.get('text', '')).strip()
-        if not response:
-            return "Desculpe, não consegui processar sua mensagem adequadamente. Como posso te ajudar?"
-        
-        return response
-    except Exception as e:
-        logger.error(f"Erro no processamento Langchain: {str(e)}")
-        return "Desculpe, ocorreu um erro no processamento da sua mensagem. Como posso te ajudar?"
-
-# Modifica a função de envio de mensagens para incluir monitoramento
-def send_whatsapp_message(to, body=None, content_sid=None):
-    """Função melhorada para envio de mensagens WhatsApp"""
-    try:
-        # Garantir que o número está no formato correto
-        to_number = to if to.startswith('whatsapp:') else f'whatsapp:{to}'
-        
-        # Validar o número do WhatsApp
-        if not re.match(r'^whatsapp:\+?[1-9]\d{1,14}$', to_number):
-            logger.error(f"Número de WhatsApp inválido: {to_number}")
-            return None
-
-        # Configuração base da mensagem
-        message_params = {
-            'from_': 'whatsapp:+15557356571',
-            'to': to_number
-        }
-
-        # Adiciona o conteúdo apropriado
-        if content_sid:
-            try:
-                # Tenta enviar com template primeiro
-                message = client.messages.create(
-                        from_='whatsapp:+15557356571',
-                    to=to_number,
-                    content_sid=content_sid
-                    )
-                api_monitor.track_twilio_message()
-                return message
-            except Exception as e:
-                logger.error(f"Erro ao enviar template (content_sid={content_sid}): {str(e)}")
-                # Se falhar e tiver body como fallback, tenta enviar como mensagem normal
-                if body:
-                    message_params['body'] = body
-                else:
-                    raise e
-        elif body:
-            message_params['body'] = body
-        else:
-            logger.error("Nenhum conteúdo fornecido para envio")
-            return None
-
-        # Enviar mensagem com retry
-        for attempt in range(3):
-            try:
-                message = client.messages.create(**message_params)
-                api_monitor.track_twilio_message()
-                api_monitor.save_usage_data()
-                return message
-            except Exception as e:
-                logger.error(f"Tentativa {attempt + 1} falhou: {str(e)}")
-                if attempt == 2:  # Última tentativa
-                    raise e
-                time.sleep(1)  # Espera 1 segundo antes de tentar novamente
-                
-    except Exception as e:
-        logger.error(f"Erro ao enviar mensagem WhatsApp: {str(e)}")
-        return None
-
-# Adiciona rota para visualização de custos
-@app.route('/')
-def index():
-    return "Funcionando 2025!"
-
 @app.route('/monitoramento')
 def monitoramento():
     """Rota amigável para monitoramento de custos"""
@@ -786,158 +695,139 @@ def limpar_dados_antigos():
 # Adiciona ao scheduler
 scheduler.add_job(limpar_dados_antigos, 'interval', days=1)
 
-# Modifica a função bot para usar o novo send_whatsapp_message
 @app.route('/bot', methods=['POST'])
 def bot():
     try:
-        from_whatsapp_number = request.values.get('From', '')
-        incoming_msg = request.values.get('Body', '').strip()
+        # Verificar se é um arquivo ou áudio
+        if 'MediaContentType0' in request.values:
+            media_type = request.values.get('MediaContentType0', '')
+            from_whatsapp_number = request.values.get('From', '')
+            
+            # Se for um áudio, enviar mensagem informando que não suporta
+            if media_type.startswith('audio/'):
+                try:
+                    client.messages.create(
+                        from_='whatsapp:+15557356571',
+                        to=from_whatsapp_number,
+                        body="Desculpe, não consigo processar mensagens de áudio. Por favor, envie sua mensagem em texto."
+                    )
+                except Exception as e:
+                    logger.error(f"Erro ao enviar mensagem sobre áudio: {str(e)}")
+            
+            # Para qualquer tipo de mídia, continuamos o fluxo normal
+            # mas não processamos o conteúdo da mídia
 
-        # Validações iniciais
+        # Continua com o fluxo normal
+        from_whatsapp_number = request.values.get('From')
+        if from_whatsapp_number not in conversation_contexts:
+            conversation_contexts[from_whatsapp_number] = ConversationContext()
+        
+        context = conversation_contexts[from_whatsapp_number]
+        incoming_msg = request.values.get('Body', '').strip()
         if not incoming_msg:
             logger.info('Mensagem vazia recebida; retornando OK sem processamento adicional.')
             return "OK", 200
         
-        if not from_whatsapp_number or not from_whatsapp_number.startswith('whatsapp:'):
-            logger.error(f"Número de WhatsApp inválido: {from_whatsapp_number}")
-            return "Invalid WhatsApp number", 400
-
         tempo_atual = time.time()
 
-        # Verifica duplicação com log detalhado
-        if from_whatsapp_number in historico_clientes:
-            ultima_interacao = historico_clientes[from_whatsapp_number]["ultima_interacao"]
-            ultima_mensagem = historico_clientes[from_whatsapp_number]["ultima_mensagem"]
-            
-            if (tempo_atual - ultima_interacao) < 2 and ultima_mensagem == incoming_msg:
-                logger.info(f"Mensagem duplicada detectada: {incoming_msg}")
-                logger.info(f"Tempo desde última mensagem: {tempo_atual - ultima_interacao:.2f}s")
-                return "OK", 200
-            
-        # Inicialização de novo usuário
+        # Controle de histórico
         if from_whatsapp_number not in historico_clientes:
             historico_clientes[from_whatsapp_number] = {
                 "historico": [],
-                "ultima_interacao": tempo_atual,
-                "ultima_mensagem": incoming_msg
+                "ultima_interacao": tempo_atual
             }
-            conversation_contexts[from_whatsapp_number] = ConversationContext()
+        else:
+            historico_clientes[from_whatsapp_number]["ultima_interacao"] = tempo_atual
+
+        # Histórico
+        historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
+        historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"])
+
+        if from_whatsapp_number not in cliente_estado:
+            cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
+            try:
+                logger.info(f"Enviando mensagem de boas-vindas para {from_whatsapp_number}")
+                message = client.messages.create(
+                    from_='whatsapp:+15557356571',
+                    to=from_whatsapp_number,
+                    body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
+                )
+                logger.info(f"Mensagem enviada com sucesso. SID: {message.sid}")
+            except Exception as e:
+                logger.error(f"Erro ao enviar mensagem: {str(e)}")
+            return "OK", 200
+
+        estado_cliente = cliente_estado[from_whatsapp_number]
+
+        logger.info(f"Mensagem recebida de {from_whatsapp_number}: {incoming_msg}")
+        logger.info(f"Estado atual: {estado_cliente['etapa']}")
+        logger.debug(f"Contexto completo: {conversation_contexts[from_whatsapp_number].context}")
+
+        if incoming_msg == "Desejo voltar!":
+            # Reinicia o estado do cliente
             cliente_estado[from_whatsapp_number] = {"etapa": "inicial", "respostas": {}}
             
-            # Envia mensagem de boas-vindas apenas para novos usuários
-            send_whatsapp_message(
+            # Envia a mensagem de boas-vindas novamente
+            client.messages.create(
+                from_='whatsapp:+15557356571',
                 to=from_whatsapp_number,
                 body="Olá, Seja bem-vindo(a) 🏘\nAqui é a *Lare*, assistente virtual da Descomplica Lares! Como posso te ajudar?"
             )
             return "OK", 200
 
-        # Atualiza histórico
-        historico_clientes[from_whatsapp_number].update({
-            "ultima_interacao": tempo_atual,
-            "ultima_mensagem": incoming_msg
-        })
-        historico_clientes[from_whatsapp_number]["historico"].append(incoming_msg)
-        historico = '\n'.join(historico_clientes[from_whatsapp_number]["historico"][-5:])
-        estado_cliente = cliente_estado[from_whatsapp_number]
-
-        logger.info(f"Mensagem recebida de {from_whatsapp_number}: {incoming_msg}")
-        logger.info(f"Estado atual: {estado_cliente['etapa']}")
-
-        # Processamento de intenções
-        try:
-            # Se já estiver em um questionário, não processa intenções
-            if estado_cliente["etapa"].startswith("questionario_"):
-                if estado_cliente["etapa"].startswith("questionario_reuniao"):
-                    current_field = estado_cliente["etapa"].replace("questionario_reuniao_", "")
-                    return process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field, historico, "reuniao")
-                elif estado_cliente["etapa"].startswith("questionario_visita"):
-                    current_field = estado_cliente["etapa"].replace("questionario_visita_", "")
-                    return process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field, historico, "visita")
-            else:
-                # Primeiro verifica com o Rubens (intention_chain)
-                intent_response = intention_chain.invoke({
-                    "message": incoming_msg
+        if estado_cliente["etapa"] == "inicial":
+            intent_response = intention_chain.run(message=incoming_msg).strip()
+            logger.info(f"Intenção detectada: {intent_response}")
+            if intent_response == "PASS_BUTTON":
+                estado_cliente["etapa"] = "aguardando_opcao"
+                client.messages.create(
+                    from_='whatsapp:+15557356571',
+                    to=from_whatsapp_number,
+                    content_sid=template_eat
+                )
+                return "OK", 200
+            elif intent_response == "CONTINUE":
+                response = conversation_chain.run({
+                    "message": incoming_msg,
+                    "historico": historico,
+                    "markdown_instrucoes": markdown_instrucoes,
+                    "configuracoes": configuracoes
                 })
-                intent_response = str(intent_response.get('text', '')).strip()
-                
-                logger.info(f"Intenção detectada: {intent_response}")
-                
-                if intent_response == "PASS_BUTTON":
-                    estado_cliente["etapa"] = "aguardando_opcao"
-                    try:
-                        # Envia os templates na ordem correta
-                        client.messages.create(
-                            from_='whatsapp:+15557356571',
-                            to=from_whatsapp_number,
-                            content_sid=template_iap
-                        )
-                        sleep(1.5)
-                        client.messages.create(
-                            from_='whatsapp:+15557356571',
-                            to=from_whatsapp_number,
-                            content_sid=template_pe
-                        )
-                        sleep(1.5)
-                        client.messages.create(
-                            from_='whatsapp:+15557356571',
-                            to=from_whatsapp_number,
-                            content_sid=template_loop
-                        )
-                    except Exception as e:
-                        logger.error(f"Erro ao enviar templates: {str(e)}")
-                        # Fallback apenas em caso de erro
-                        client.messages.create(
-                            from_='whatsapp:+15557356571',
-                            to=from_whatsapp_number,
-                            body="Por favor, selecione uma das opções:\n1. Informações sobre a Descomplica\n2. Marcar Reunião\n3. Agendar Visita\n4. Análise de Crédito"
-                        )
-                elif intent_response == "CONTINUE":
-                    # Se não for uma intenção específica, processa com a Lola
-                    try:
-                        response = process_with_langchain(incoming_msg, historico)
-                        if response:
-                            # Envia a resposta da Lola
-                            result = send_whatsapp_message(
-                                to=from_whatsapp_number,
-                                body=str(response)
-                            )
-                            
-                            if result is not None:
-                                # Aguarda um pouco antes de enviar a mensagem adicional
-                                time.sleep(1.5)
-                                send_whatsapp_message(
-                                    to=from_whatsapp_number,
-                                    body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
-                                )
-                    except Exception as e:
-                        logger.error(f"Erro ao processar resposta da Lola: {str(e)}")
-                        send_whatsapp_message(
-                            to=from_whatsapp_number,
-                            body="Desculpe, tive um problema ao processar sua mensagem. Pode tentar novamente?"
-                        )
-        except Exception as e:
-            logger.error(f"Erro no processamento de intenção: {str(e)}")
-            send_whatsapp_message(
-                to=from_whatsapp_number,
-                body="Desculpe, tive um problema ao processar sua mensagem. Pode tentar novamente?"
-            )
+                client.messages.create(
+                    from_='whatsapp:+15557356571',
+                    to=from_whatsapp_number,
+                    body=response
+                )
+                sleep(1.5)
+                client.messages.create(
+                    from_='whatsapp:+15557356571',
+                    to=from_whatsapp_number,
+                    body="*Para continuarmos, nós trabalhamos com reuniões online ou visitas na unidade, diga-nos qual você prefere 😄*\n*Porém, se tiver mais alguma dúvida, fique à vontade!*"
+                )
+                return "OK", 200
 
         if estado_cliente["etapa"] == "aguardando_opcao":
-            if incoming_msg.lower() in [option.lower() for option in BUTTON_IDS.keys()]:
-                option = next(key for key in BUTTON_IDS.keys() if key.lower() == incoming_msg.lower())
-                
-                if option == "infos_descomplica":
-                    templates = [template_iap, template_pe, template_loop]
-                    for template in templates:
-                        result = send_whatsapp_message(
+            if incoming_msg in BUTTON_IDS:
+                if incoming_msg == "infos_descomplica":
+                    client.messages.create(
+                        from_='whatsapp:+15557356571',
                         to=from_whatsapp_number,
-                            content_sid=template
+                        content_sid=template_iap
                     )
-                        if result is None:
-                            logger.error(f"Erro ao enviar template {template}")
-                        time.sleep(1.5)
+                    sleep(1)
+                    client.messages.create(
+                        from_='whatsapp:+15557356571',
+                        to=from_whatsapp_number,
+                        content_sid=template_pe
+                    )
+                    sleep(3)
+                    client.messages.create(
+                        from_='whatsapp:+15557356571',
+                        to=from_whatsapp_number,
+                        content_sid=template_loop
+                    )
                     estado_cliente["etapa"] = "aguardando_opcao"
-                elif option == "analise_credito":
+                elif incoming_msg == "analise_credito":
                     client.messages.create(
                         from_='whatsapp:+15557356571',
                         to=from_whatsapp_number,
@@ -976,7 +866,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
                         to=from_whatsapp_number,
                         content_sid=template_loop
                     )
-                elif option == "marcar_reuniao":
+                elif incoming_msg == "marcar_reuniao":
                     # Pega a primeira pergunta do questionário
                     first_question = questionnaire.get_first_question("reuniao")
                     if first_question.get("template_id"):
@@ -992,7 +882,7 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
                             body=f"Ótimo! Para marcar sua reunião, precisamos de algumas informações. Vai levar só 3 minutinhos 😉\n{first_question['question']}"
                         )
                     estado_cliente["etapa"] = f"questionario_reuniao_{first_question['field']}"
-                elif option == "agendar_visita":
+                elif incoming_msg == "agendar_visita":
                     # Pega a primeira pergunta do questionário
                     first_question = questionnaire.get_first_question("visita")
                     if first_question.get("template_id"):
@@ -1175,7 +1065,7 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
                     "Tudo bem! Quando quiser retomar o formulário, é só me avisar dizendo 'quero continuar'. 😊",
                     "Ok, sem problemas! Podemos continuar depois, basta dizer 'quero continuar'. 👍",
                     "Entendi! Quando estiver pronto para continuar, me avise com 'quero continuar'. 🤗",
-                    "Claro! Ficarei aqui aguardando. Quando quiser voltar, diga 'quero continuar'. "
+                    "Claro! Ficarei aqui aguardando. Quando quiser voltar, diga 'quero continuar'. 😉"
                 ]
                 client.messages.create(
                     from_='whatsapp:+15557356571',
@@ -1500,7 +1390,7 @@ def generate_insights(df):
     except Exception as e:
         logger.error(f"Erro ao gerar insights: {str(e)}")
         return "Erro ao gerar insights."
-
+    
 @app.route('/dashboard')
 def dashboard():
     try:
@@ -1626,8 +1516,11 @@ def cleanup_old_usage_data():
 
 # Adiciona job ao scheduler existente
 scheduler.add_job(cleanup_old_usage_data, 'cron', day='1')
-
 scheduler.start()
+
+@app.route('/')
+def index():
+    return "Funcionando 2025!"
 
 if __name__ != "__main__":
     gunicorn_app = app
