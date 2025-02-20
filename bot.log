@@ -10684,3 +10684,149 @@ NameError: name 'ultima_pergunta' is not defined
 2025-02-14 10:06:53,304 - app - INFO - Criando gráfico de experiência
 2025-02-14 10:06:53,306 - app - INFO - Gráficos criados com sucesso
 2025-02-14 10:06:53,308 - app - INFO - Dados preparados com sucesso. Total de interações: 0
+2025-02-20 19:13:52,165 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:13:52,166 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-20 19:13:52,166 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-20 19:13:52,167 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-20 19:13:52,744 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:13:52,750 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:13:52,751 - apscheduler.scheduler - INFO - Added job "limpar_historico_antigo" to job store "default"
+2025-02-20 19:13:52,751 - apscheduler.scheduler - INFO - Added job "limpar_dados_antigos" to job store "default"
+2025-02-20 19:13:52,752 - apscheduler.scheduler - INFO - Added job "cleanup_old_usage_data" to job store "default"
+2025-02-20 19:13:52,752 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-20 19:13:52,755 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-20 19:17:29,909 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:17:29,910 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-20 19:17:29,911 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-20 19:17:29,911 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-20 19:17:30,506 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:17:30,511 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:17:30,511 - apscheduler.scheduler - INFO - Added job "limpar_historico_antigo" to job store "default"
+2025-02-20 19:17:30,512 - apscheduler.scheduler - INFO - Added job "limpar_dados_antigos" to job store "default"
+2025-02-20 19:17:30,512 - apscheduler.scheduler - INFO - Added job "cleanup_old_usage_data" to job store "default"
+2025-02-20 19:17:30,512 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-20 19:17:30,515 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-20 19:18:41,622 - app - INFO - Enviando mensagem de boas-vindas para whatsapp:+5511988378088
+2025-02-20 19:18:41,818 - twilio.http_client - INFO - -- BEGIN Twilio API Request --
+2025-02-20 19:18:41,819 - twilio.http_client - INFO - POST Request: https://api.twilio.com/2010-04-01/Accounts/AC5b3293b838d93ef4bbe962f873a6b5a8/Messages.json
+2025-02-20 19:18:41,820 - twilio.http_client - INFO - Headers:
+2025-02-20 19:18:41,820 - twilio.http_client - INFO - Content-Type : application/x-www-form-urlencoded
+2025-02-20 19:18:41,820 - twilio.http_client - INFO - Accept : application/json
+2025-02-20 19:18:41,820 - twilio.http_client - INFO - User-Agent : twilio-python/9.4.4 (Windows AMD64) Python/3.13.1
+2025-02-20 19:18:41,820 - twilio.http_client - INFO - X-Twilio-Client : python-9.4.4
+2025-02-20 19:18:41,821 - twilio.http_client - INFO - Accept-Charset : utf-8
+2025-02-20 19:18:41,821 - twilio.http_client - INFO - -- END Twilio API Request --
+2025-02-20 19:18:42,160 - twilio.http_client - INFO - Response Status Code: 401
+2025-02-20 19:18:42,161 - twilio.http_client - INFO - Response Headers: {'Content-Type': 'application/json', 'Content-Length': '107', 'Connection': 'keep-alive', 'Date': 'Thu, 20 Feb 2025 22:18:42 GMT', 'X-Powered-By': 'AT-5000', 'X-Twilio-Error-Code': '20003', 'Twilio-Request-Id': 'RQ474ae59c873470f576cfb863c0c83527', 'Twilio-Request-Duration': '0.017', 'X-Home-Region': 'us1', 'X-Api-Domain': 'api.twilio.com', 'Strict-Transport-Security': 'max-age=31536000', 'Www-Authenticate': 'Basic realm="Twilio API"', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Accept, Authorization, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, Idempotency-Key, X-Pre-Auth-Context, X-Target-Region', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS', 'Access-Control-Expose-Headers': 'ETag, Twilio-Request-Id', 'Access-Control-Allow-Credentials': 'true', 'X-Shenanigans': 'none', 'X-Cache': 'Error from cloudfront', 'Via': '1.1 8364ca155003e291b521198d3285c5d6.cloudfront.net (CloudFront)', 'X-Amz-Cf-Pop': 'GRU3-P4', 'X-Amz-Cf-Id': 'bwSBvNcWcLVcjRmopYS1-H7MjBVyrmgCKUDbXTTntLyC8kA0hqpeJg=='}
+2025-02-20 19:18:42,161 - app - ERROR - Erro ao enviar mensagem: 
+[31m[49mHTTP Error[0m [37m[49mYour request was:[0m
+
+[36m[49mPOST /Accounts/AC5b3293b838d93ef4bbe962f873a6b5a8/Messages.json[0m
+
+[37m[49mTwilio returned the following information:[0m
+
+[34m[49mUnable to create record: Authenticate[0m
+
+[37m[49mMore information may be available here:[0m
+
+[34m[49mhttps://www.twilio.com/docs/errors/20003[0m
+
+
+2025-02-20 19:19:56,603 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:19:56,604 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-20 19:19:56,604 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-20 19:19:56,604 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-20 19:19:57,184 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:19:57,189 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:19:57,189 - apscheduler.scheduler - INFO - Added job "limpar_historico_antigo" to job store "default"
+2025-02-20 19:19:57,190 - apscheduler.scheduler - INFO - Added job "limpar_dados_antigos" to job store "default"
+2025-02-20 19:19:57,191 - apscheduler.scheduler - INFO - Added job "cleanup_old_usage_data" to job store "default"
+2025-02-20 19:19:57,191 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-20 19:19:57,194 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-20 19:20:04,770 - app - INFO - Enviando mensagem de boas-vindas para whatsapp:+5511988378088
+2025-02-20 19:20:04,863 - twilio.http_client - INFO - -- BEGIN Twilio API Request --
+2025-02-20 19:20:04,864 - twilio.http_client - INFO - POST Request: https://api.twilio.com/2010-04-01/Accounts/AC5b3293b838d93ef4bbe962f873a6b5a8/Messages.json
+2025-02-20 19:20:04,864 - twilio.http_client - INFO - Headers:
+2025-02-20 19:20:04,864 - twilio.http_client - INFO - Content-Type : application/x-www-form-urlencoded
+2025-02-20 19:20:04,864 - twilio.http_client - INFO - Accept : application/json
+2025-02-20 19:20:04,865 - twilio.http_client - INFO - User-Agent : twilio-python/9.4.4 (Windows AMD64) Python/3.13.1
+2025-02-20 19:20:04,865 - twilio.http_client - INFO - X-Twilio-Client : python-9.4.4
+2025-02-20 19:20:04,865 - twilio.http_client - INFO - Accept-Charset : utf-8
+2025-02-20 19:20:04,865 - twilio.http_client - INFO - -- END Twilio API Request --
+2025-02-20 19:20:05,294 - twilio.http_client - INFO - Response Status Code: 401
+2025-02-20 19:20:05,294 - twilio.http_client - INFO - Response Headers: {'Content-Type': 'application/json', 'Content-Length': '107', 'Connection': 'keep-alive', 'Date': 'Thu, 20 Feb 2025 22:20:05 GMT', 'X-Powered-By': 'AT-5000', 'X-Twilio-Error-Code': '20003', 'Twilio-Request-Id': 'RQb5b3e69ce6d0843328e9ea806709f507', 'Twilio-Request-Duration': '0.009', 'X-Home-Region': 'us1', 'X-Api-Domain': 'api.twilio.com', 'Strict-Transport-Security': 'max-age=31536000', 'Www-Authenticate': 'Basic realm="Twilio API"', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Accept, Authorization, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, Idempotency-Key, X-Pre-Auth-Context, X-Target-Region', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS', 'Access-Control-Expose-Headers': 'ETag, Twilio-Request-Id', 'Access-Control-Allow-Credentials': 'true', 'X-Shenanigans': 'none', 'X-Cache': 'Error from cloudfront', 'Via': '1.1 b32b674425bc91de1120f0cc3dff96dc.cloudfront.net (CloudFront)', 'X-Amz-Cf-Pop': 'GRU3-P4', 'X-Amz-Cf-Id': 'RNhGLKE4KcAKGli8AgLXI8gmmh43r08icyBrVz1zCosJ6l18h5jcwQ=='}
+2025-02-20 19:20:05,295 - app - ERROR - Erro ao enviar mensagem: 
+[31m[49mHTTP Error[0m [37m[49mYour request was:[0m
+
+[36m[49mPOST /Accounts/AC5b3293b838d93ef4bbe962f873a6b5a8/Messages.json[0m
+
+[37m[49mTwilio returned the following information:[0m
+
+[34m[49mUnable to create record: Authenticate[0m
+
+[37m[49mMore information may be available here:[0m
+
+[34m[49mhttps://www.twilio.com/docs/errors/20003[0m
+
+
+2025-02-20 19:24:26,544 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:24:26,545 - langchain_community.chat_models.openai - WARNING - WARNING! top_p is not default parameter.
+                    top_p was transferred to model_kwargs.
+                    Please confirm that top_p is what you intended.
+2025-02-20 19:24:26,545 - langchain_community.chat_models.openai - WARNING - WARNING! frequency_penalty is not default parameter.
+                    frequency_penalty was transferred to model_kwargs.
+                    Please confirm that frequency_penalty is what you intended.
+2025-02-20 19:24:26,546 - langchain_community.chat_models.openai - WARNING - WARNING! presence_penalty is not default parameter.
+                    presence_penalty was transferred to model_kwargs.
+                    Please confirm that presence_penalty is what you intended.
+2025-02-20 19:24:27,128 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:24:27,132 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-02-20 19:24:27,132 - apscheduler.scheduler - INFO - Added job "limpar_historico_antigo" to job store "default"
+2025-02-20 19:24:27,133 - apscheduler.scheduler - INFO - Added job "limpar_dados_antigos" to job store "default"
+2025-02-20 19:24:27,133 - apscheduler.scheduler - INFO - Added job "cleanup_old_usage_data" to job store "default"
+2025-02-20 19:24:27,133 - apscheduler.scheduler - INFO - Scheduler started
+2025-02-20 19:24:27,136 - waitress - INFO - Serving on http://0.0.0.0:5000
+2025-02-20 19:24:35,150 - app - INFO - Enviando mensagem de boas-vindas para whatsapp:+5511988378088
+2025-02-20 19:24:35,240 - twilio.http_client - INFO - -- BEGIN Twilio API Request --
+2025-02-20 19:24:35,241 - twilio.http_client - INFO - POST Request: https://api.twilio.com/2010-04-01/Accounts/AC5b3293b838d93ef4bbe962f873a6b5a8/Messages.json
+2025-02-20 19:24:35,241 - twilio.http_client - INFO - Headers:
+2025-02-20 19:24:35,241 - twilio.http_client - INFO - Content-Type : application/x-www-form-urlencoded
+2025-02-20 19:24:35,242 - twilio.http_client - INFO - Accept : application/json
+2025-02-20 19:24:35,242 - twilio.http_client - INFO - User-Agent : twilio-python/9.4.4 (Windows AMD64) Python/3.13.1
+2025-02-20 19:24:35,242 - twilio.http_client - INFO - X-Twilio-Client : python-9.4.4
+2025-02-20 19:24:35,242 - twilio.http_client - INFO - Accept-Charset : utf-8
+2025-02-20 19:24:35,243 - twilio.http_client - INFO - -- END Twilio API Request --
+2025-02-20 19:24:35,641 - twilio.http_client - INFO - Response Status Code: 401
+2025-02-20 19:24:35,642 - twilio.http_client - INFO - Response Headers: {'Content-Type': 'application/json', 'Content-Length': '107', 'Connection': 'keep-alive', 'Date': 'Thu, 20 Feb 2025 22:24:35 GMT', 'X-Powered-By': 'AT-5000', 'X-Twilio-Error-Code': '20003', 'Twilio-Request-Id': 'RQ904be6f48c00caff128a31310da2a7a3', 'Twilio-Request-Duration': '0.018', 'X-Home-Region': 'us1', 'X-Api-Domain': 'api.twilio.com', 'Strict-Transport-Security': 'max-age=31536000', 'Www-Authenticate': 'Basic realm="Twilio API"', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Accept, Authorization, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, Idempotency-Key, X-Pre-Auth-Context, X-Target-Region', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS', 'Access-Control-Expose-Headers': 'ETag, Twilio-Request-Id', 'Access-Control-Allow-Credentials': 'true', 'X-Shenanigans': 'none', 'X-Cache': 'Error from cloudfront', 'Via': '1.1 1f46652afcaf0a377b232da3cffaae08.cloudfront.net (CloudFront)', 'X-Amz-Cf-Pop': 'GRU3-P4', 'X-Amz-Cf-Id': 'xXKJs8AyI_Z3qwbB4IaLnOL39zlNBXN0ntpdl3HtKyDEQuhtZ4y7xQ=='}
+2025-02-20 19:24:35,642 - app - ERROR - Erro ao enviar mensagem: 
+[31m[49mHTTP Error[0m [37m[49mYour request was:[0m
+
+[36m[49mPOST /Accounts/AC5b3293b838d93ef4bbe962f873a6b5a8/Messages.json[0m
+
+[37m[49mTwilio returned the following information:[0m
+
+[34m[49mUnable to create record: Authenticate[0m
+
+[37m[49mMore information may be available here:[0m
+
+[34m[49mhttps://www.twilio.com/docs/errors/20003[0m
+
+
