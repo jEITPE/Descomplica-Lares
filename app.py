@@ -1139,9 +1139,6 @@ def load_data():
             'custo_total': custo_total
         }
         
-        # Remover colunas não utilizadas
-        df = df.drop(['Unnamed1', 'Unnamed2', 'CPF', 'Motivo'], axis=1)
-        
         # Limpar e converter dados
         df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
         df['Renda Mensal'] = df['Renda Mensal'].str.replace('.', '').str.replace(',', '.').astype(float)
