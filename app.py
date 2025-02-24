@@ -1114,18 +1114,13 @@ def load_data():
         interaction_data = load_interactions()
         total_interacoes = len(interaction_data.get("interactions", {}))
         
-        # Definir os nomes das colunas
-        column_names = ['Nome', 'Idade', 'CPF', 'Experiência > 3 anos', 'Estado Civil', 
-                       'Tipo de Trabalho', 'Motivo', 'Filhos Menores', 'Renda Mensal', 
-                       'Unnamed1', 'Unnamed2']
-        
         # Tentar diferentes encodings em ordem
         encodings = ['utf-8', 'utf-8-sig', 'latin1', 'iso-8859-1']
         df = None
         
         for encoding in encodings:
             try:
-                df = pd.read_csv(file_path, encoding=encoding, names=column_names, header=None)
+                df = pd.read_csv(file_path, encoding=encoding)
                 break
             except UnicodeDecodeError:
                 continue
