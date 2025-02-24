@@ -144,7 +144,7 @@ class QuestionnaireAI:
         }
         
         self.fallback_prompt = PromptTemplate(
-            input_variables=["message", "current_question", "context"],
+            input_variables=["message", "current_question", "context", "historico", "last_question", "current_stage"],
             template="""
             Você é um assistente especializado em identificar quando um usuário está respondendo corretamente a um questionário ou desviando do fluxo, seja fazendo perguntas, expressando dúvidas ou mudando de assunto. Sua função é analisar a interação do usuário e decidir se ele está seguindo o fluxo normal do questionário ou se precisa de assistência.
 
