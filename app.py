@@ -339,7 +339,7 @@ def validar_horario(horario):
 # Função para salvar as respostas no CSV
 def salvar_no_csv(estado_cliente):
     file_path = csv_file
-    headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta", "dia", "horario"]
+    headers = ["nome", "idade", "cpf", "carteira_assinada", "estado_civil", "trabalho", "restricao_cpf", "filhos_menores", "renda_bruta"]
 
     data = {
         "nome": estado_cliente["respostas"].get("nome", ""),
@@ -351,8 +351,6 @@ def salvar_no_csv(estado_cliente):
         "restricao_cpf": estado_cliente["respostas"].get("restricao_cpf", ""),
         "filhos_menores": estado_cliente["respostas"].get("filhos_menores", ""),
         "renda_bruta": estado_cliente["respostas"].get("renda_bruta", ""),
-        "dia": estado_cliente["respostas"].get("dia", ""),
-        "horario": estado_cliente["respostas"].get("horario", "")
     }
 
     # Verificar se o arquivo já existe
