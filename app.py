@@ -801,6 +801,9 @@ def bot():
                 )
                 return "OK", 200
             elif intent_response == "CONTINUE":
+                api_monitor.track_twilio_message()  # Monitorar uso do Twilio
+                tokens_used = len(incoming_msg.split())  # Exemplo de contagem de tokens
+                api_monitor.track_openai_usage("gpt-3.5-turbo", tokens_used)  # Monitorar uso da OpenAI
                 response = conversation_chain.run({
                     "message": incoming_msg,
                     "historico": historico,
@@ -1408,14 +1411,8 @@ def generate_insights(df):
 def dashboard():
     try:
         logger.info("Carregando dados para o dashboard")
-        df = load_data()
+        df = load_data()  # Carregar dados do CSV
         
-        # Carregar dados de interações do JSON
-        interaction_data = load_interactions()
-        total_interacoes = len(interaction_data.get("interactions", {}))
-        interacoes_excedentes = max(0, total_interacoes - 150)
-        custo_total = interacoes_excedentes * 2
-
         if df.empty:
             logger.error("DataFrame vazio após carregar dados")
             return render_template(
@@ -1424,10 +1421,16 @@ def dashboard():
                 table="",
                 graphJSON="{}",
                 insights="",
-                total_interacoes=total_interacoes,
-                interacoes_excedentes=interacoes_excedentes,
-                custo_total=custo_total
+                total_interacoes=0,
+                interacoes_excedentes=0,
+                custo_total=0.0
             )
+        
+        # Carregar dados de interações do JSON
+        interaction_data = load_interactions()
+        total_interacoes = len(interaction_data.get("interactions", {}))
+        interacoes_excedentes = max(0, total_interacoes - 150)
+        custo_total = interacoes_excedentes * 2
 
         # Resto do código permanece igual, apenas usando as variáveis que definimos acima
         table = df.head(4).to_html(
