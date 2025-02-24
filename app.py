@@ -1108,7 +1108,7 @@ def load_data():
     try:
         logger.info("Iniciando carregamento de dados")
 
-        csv_dir = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'csv')
+        csv_dir = os.path.join(BASE_DIR, 'data', 'csv')
         os.makedirs(csv_dir, exist_ok=True)
         file_path = os.path.join(csv_dir, 'customers.csv')
         
