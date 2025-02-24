@@ -84,7 +84,7 @@ lola_json = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'lola.json')
 
 csv_dir = os.path.join(BASE_DIR, 'data', 'csv')
 os.makedirs(csv_dir, exist_ok=True)
-csv_file = os.path.abspath(os.path.join(csv_dir, 'costomers.csv'))
+csv_file = os.path.abspath(os.path.join(csv_dir, 'costumers.csv'))
 
 # Configuração do Langchain
 llm = ChatOpenAI(
@@ -1110,7 +1110,7 @@ def load_data():
 
         csv_dir = os.path.join(BASE_DIR, 'data', 'csv')
         os.makedirs(csv_dir, exist_ok=True)
-        file_path = os.path.join(csv_dir, 'customers.csv')
+        file_path = os.path.join(csv_dir, 'costumers.csv')
         
         # Carregar interações únicas
         interaction_data = load_interactions()
