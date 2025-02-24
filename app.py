@@ -1224,7 +1224,10 @@ def create_graphs(df):
         
         # Gráfico de renda - Barras modernas
         logger.info("Criando gráfico de renda")
-        renda_bins = pd.cut(df['Renda Mensal'], 
+        # Converter para float e tratar valores inválidos
+        df['Renda Bruta Mensal'] = pd.to_numeric(df['Renda Bruta Mensal'].str.replace('R$', '').str.replace('.', '').str.replace(',', '.'), errors='coerce')
+        
+        renda_bins = pd.cut(df['Renda Bruta Mensal'], 
                           bins=[0, 3000, 5000, 8000, float('inf')],
                           labels=['0-3k', '3k-5k', '5k-8k', '8k+'])
         renda_counts = renda_bins.value_counts().sort_index()
@@ -1294,7 +1297,7 @@ def create_graphs(df):
         
         # Gráfico de filhos - Barras verticais modernas
         logger.info("Criando gráfico de filhos")
-        filhos_counts = df['Filhos Menores'].value_counts()
+        filhos_counts = df['Filhos Menores?'].value_counts()
         filhos_data = [{
             'type': 'bar',
             'x': filhos_counts.index,
@@ -1326,7 +1329,7 @@ def create_graphs(df):
         
         # Gráfico de experiência - Pie moderno
         logger.info("Criando gráfico de experiência")
-        carteira_counts = df['Experiência > 3 anos'].value_counts()
+        carteira_counts = df['Experiência > 3 anos?'].value_counts()
         carteira_data = [{
             'type': 'pie',
             'labels': carteira_counts.index,
@@ -1376,10 +1379,11 @@ def generate_insights(df):
         idade_max = df['Idade'].max()
         insights += f"<li><strong>Faixa Etária:</strong> A idade média dos leads é {idade_media:.1f} anos, variando de {idade_min:.0f} a {idade_max:.0f} anos.</li>"
         
-        # Insight sobre renda
-        renda_media = df['Renda Mensal'].mean()
-        renda_min = df['Renda Mensal'].min()
-        renda_max = df['Renda Mensal'].max()
+        # Insight sobre renda - usando o nome correto da coluna
+        df['Renda Bruta Mensal'] = pd.to_numeric(df['Renda Bruta Mensal'].str.replace('R$', '').str.replace('.', '').str.replace(',', '.'), errors='coerce')
+        renda_media = df['Renda Bruta Mensal'].mean()
+        renda_min = df['Renda Bruta Mensal'].min()
+        renda_max = df['Renda Bruta Mensal'].max()
         insights += f"<li><strong>Perfil Financeiro:</strong> A renda média mensal é R$ {renda_media:,.2f}, com valores entre R$ {renda_min:,.2f} e R$ {renda_max:,.2f}.</li>"
         
         # Insight sobre tipo de trabalho
@@ -1389,11 +1393,11 @@ def generate_insights(df):
         insights += f"<li><strong>Situação Profissional:</strong> {percentual_tipo:.1f}% dos leads são {tipo_mais_comum}.</li>"
         
         # Insight sobre filhos
-        tem_filhos = (df['Filhos Menores'].str.lower() == 'sim').mean() * 100
+        tem_filhos = (df['Filhos Menores?'].str.lower() == 'sim').mean() * 100
         insights += f"<li><strong>Estrutura Familiar:</strong> {tem_filhos:.1f}% dos leads têm filhos menores.</li>"
         
         # Insight sobre experiência
-        experiencia = (df['Experiência > 3 anos'].str.lower() == 'sim').mean() * 100
+        experiencia = (df['Experiência > 3 anos?'].str.lower() == 'sim').mean() * 100
         insights += f"<li><strong>Experiência Profissional:</strong> {experiencia:.1f}% têm mais de 3 anos de experiência.</li>"
         
         insights += "</ul>"
