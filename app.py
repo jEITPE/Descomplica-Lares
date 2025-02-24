@@ -555,9 +555,9 @@ def process_questionnaire_step(from_whatsapp_number, incoming_msg, current_field
 
 def load_interactions():
     try:
-        interaction_file = os.path.join('data', 'interactions.json')
+        interaction_file = os.path.join(BASE_DIR, 'data', 'interactions.json')
         if os.path.exists(interaction_file):
-            with open(interaction_file, 'r') as f:
+            with open(interaction_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {"interactions": {}}
     except Exception as e:
@@ -566,24 +566,38 @@ def load_interactions():
 
 def save_interaction(phone_number):
     try:
-        interaction_file = os.path.join('data', 'interactions.json')
-        data = load_interactions()
+        # Create data directory if it doesn't exist
+        data_dir = os.path.join(BASE_DIR, 'data')
+        os.makedirs(data_dir, exist_ok=True)
         
-        # Se o número não existe nas interações, adiciona
+        interaction_file = os.path.join(data_dir, 'interactions.json')
+        current_time = datetime.now().isoformat()
+        
+        # Load existing data or create new structure
+        if os.path.exists(interaction_file):
+            with open(interaction_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            data = {"interactions": {}}
+        
+        # Add or update interaction
         if phone_number not in data["interactions"]:
             data["interactions"][phone_number] = {
-                "first_interaction": datetime.now().isoformat(),
-                "last_interaction": datetime.now().isoformat()
+                "first_interaction": current_time,
+                "last_interaction": current_time,
+                "total_interactions": 1
             }
         else:
-            # Se existe, apenas atualiza a última interação
-            data["interactions"][phone_number]["last_interaction"] = datetime.now().isoformat()
+            data["interactions"][phone_number]["last_interaction"] = current_time
+            data["interactions"][phone_number]["total_interactions"] = \
+                data["interactions"][phone_number].get("total_interactions", 0) + 1
         
-        # Salva o arquivo
-        with open(interaction_file, 'w') as f:
-            json.dump(data, f, indent=4)
+        # Save updated data
+        with open(interaction_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
             
-        return len(data["interactions"])  # Retorna o total de interações únicas
+        return len(data["interactions"])
+        
     except Exception as e:
         logger.error(f"Erro ao salvar interação: {str(e)}")
         return 0
@@ -713,10 +727,15 @@ scheduler.add_job(limpar_dados_antigos, 'interval', days=1)
 @app.route('/bot', methods=['POST'])
 def bot():
     try:
-        # Verificar se é um arquivo ou áudio
+        # Get the incoming phone number
+        from_whatsapp_number = request.values.get('From', '')
+        
+        # Save interaction for this number (do this before any other processing)
+        total_interacoes = save_interaction(from_whatsapp_number)
+        
+        # Rest of your bot code...
         if 'MediaContentType0' in request.values:
             media_type = request.values.get('MediaContentType0', '')
-            from_whatsapp_number = request.values.get('From', '')
             
             # Se for um áudio, enviar mensagem informando que não suporta
             if media_type.startswith('audio/'):
@@ -728,9 +747,6 @@ def bot():
                     )
                 except Exception as e:
                     logger.error(f"Erro ao enviar mensagem sobre áudio: {str(e)}")
-            
-            # Para qualquer tipo de mídia, continuamos o fluxo normal
-            # mas não processamos o conteúdo da mídia
 
         # Continua com o fluxo normal
         from_whatsapp_number = request.values.get('From')
@@ -1442,7 +1458,10 @@ def dashboard():
         
         # Carregar dados de interações do JSON
         interaction_data = load_interactions()
-        total_interacoes = len(interaction_data.get("interactions", {}))
+        total_interacoes = sum(
+            interaction["total_interactions"] 
+            for interaction in interaction_data.get("interactions", {}).values()
+        )
         interacoes_excedentes = max(0, total_interacoes - 150)
         custo_total = interacoes_excedentes * 2
 
