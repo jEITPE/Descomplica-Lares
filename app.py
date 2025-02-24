@@ -32,6 +32,7 @@ from openai import OpenAI
 from flask import render_template
 import random
 from datetime import datetime, timedelta
+from load_dashboard import load_dashboard_data
 
 
 # Configuração do logger
@@ -1411,10 +1412,10 @@ def generate_insights(df):
 def dashboard():
     try:
         logger.info("Carregando dados para o dashboard")
-        df = load_data()  # Carregar dados do CSV
+        df = load_dashboard_data(csv_file)  # Usando a nova função de carregamento
         
-        if df.empty:
-            logger.error("DataFrame vazio após carregar dados")
+        if df is None:
+            logger.error("Erro ao carregar dados do CSV")
             return render_template(
                 'dashboard.html',
                 error="Não foi possível carregar os dados. Verifique o arquivo CSV.",
