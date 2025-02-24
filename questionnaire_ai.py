@@ -370,26 +370,42 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
         # Cria o diretório se não existir
         os.makedirs(os.path.dirname(self.csv_file_path), exist_ok=True)
 
-        # Limpa e valida os dados
-        cleaned_data = self.clean_and_validate_data(respostas)
+         # Mapeia os campos do formulário para as colunas do CSV
+        column_mapping = {
+            'nome': 'Nome',
+            'idade': 'Idade',
+            'cpf': 'CPF',
+            'carteira_assinada': 'Experiência > 3 anos?',  # Updated
+            'estado_civil': 'Estado Civil',
+            'trabalho': 'Tipo de Trabalho',  # Updated
+            'restricao_cpf': 'Restrição no CPF?',
+            'filhos_menores': 'Filhos Menores?',
+            'renda_bruta': 'Renda Bruta Mensal'
+        }
 
-        # Define somente os campos que devem ir para o CSV
+        # Define o cabeçalho correto do CSV
         headers = [
-            "nome",
-            "idade",
-            "cpf",
-            "carteira_assinada",
-            "estado_civil",
-            "trabalho",
-            "restricao_cpf",
-            "filhos_menores",
-            "renda_bruta"
+            'Nome',
+            'Idade',
+            'CPF',
+            'Experiência > 3 anos?',
+            'Estado Civil',
+            'Tipo de Trabalho',
+            'Restrição no CPF?',
+            'Filhos Menores?',
+            'Renda Bruta Mensal'
         ]
 
-        data = {field: cleaned_data.get(field, "") for field in headers}
+        # Mapeia os dados para o formato correto
+        data = {
+            column_mapping[k]: v for k, v in respostas.items()
+            if k in column_mapping
+        }
 
+        # Verifica se o arquivo existe
         file_exists = os.path.isfile(self.csv_file_path)
 
+        # Salva no arquivo CSV
         with open(self.csv_file_path, "a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=headers)
             if not file_exists:
@@ -397,4 +413,3 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
             writer.writerow(data)
         
         print(f"✅ Dados salvos no CSV: {data}")
- 
