@@ -1224,12 +1224,21 @@ def create_graphs(df):
         
         # Gráfico de renda - Barras modernas
         logger.info("Criando gráfico de renda")
-        # Converter para float e tratar valores inválidos
-        df['Renda Bruta Mensal'] = pd.to_numeric(df['Renda Bruta Mensal'].str.replace('R$', '').str.replace('.', '').str.replace(',', '.'), errors='coerce')
+        # Certifica que a coluna é numérica
+        if not pd.api.types.is_numeric_dtype(df['Renda Bruta Mensal']):
+            df['Renda Bruta Mensal'] = pd.to_numeric(
+                df['Renda Bruta Mensal'].astype(str)
+                .str.replace('R$', '')
+                .str.replace('.', '')
+                .str.replace(',', '.'), 
+                errors='coerce'
+            )
         
-        renda_bins = pd.cut(df['Renda Bruta Mensal'], 
-                          bins=[0, 3000, 5000, 8000, float('inf')],
-                          labels=['0-3k', '3k-5k', '5k-8k', '8k+'])
+        renda_bins = pd.cut(
+            df['Renda Bruta Mensal'], 
+            bins=[0, 3000, 5000, 8000, float('inf')],
+            labels=['0-3k', '3k-5k', '5k-8k', '8k+']
+        )
         renda_counts = renda_bins.value_counts().sort_index()
         
         renda_data = [{
