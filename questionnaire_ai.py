@@ -367,16 +367,22 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
         return cleaned_data
         
     def save_to_csv(self, respostas):
+        # Cria o diretório se não existir
+        os.makedirs(os.path.dirname(self.csv_file_path), exist_ok=True)
+
         # Limpa e valida os dados
         cleaned_data = self.clean_and_validate_data(respostas)
-        
+
         headers = list(self.questions.keys()) + ["dia", "horario"]
         data = {field: cleaned_data.get(field, "") for field in headers}
-        
+
         file_exists = os.path.isfile(self.csv_file_path)
-        
+
         with open(self.csv_file_path, "a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=headers)
             if not file_exists:
-                writer.writeheader()
-            writer.writerow(data) 
+                writer.writeheader()  # Garante que o cabeçalho é escrito apenas uma vez
+            writer.writerow(data)
+        
+        print(f"✅ Dados salvos no CSV: {data}")
+ 

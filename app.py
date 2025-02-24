@@ -84,7 +84,7 @@ lola_json = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'lola.json')
 
 csv_dir = os.path.join(BASE_DIR, 'data', 'csv')
 os.makedirs(csv_dir, exist_ok=True)
-csv_file = os.path.abspath(os.path.join(csv_dir, 'customers.csv'))
+csv_file = os.path.abspath(os.path.join(csv_dir, 'costomers.csv'))
 
 # Configuração do Langchain
 llm = ChatOpenAI(
@@ -603,6 +603,8 @@ class APIMonitor:
         """Registra uso da API OpenAI"""
         today = datetime.now().strftime('%Y-%m-%d')
         month = datetime.now().strftime('%Y-%m')
+
+        logger.info(f"[DEBUG] track_openai_usage chamado com {tokens_used} tokens.")
         
         cost = (tokens_used / 1000) * self.openai_costs.get(model, 0)
         
@@ -1105,7 +1107,10 @@ Estarei te passando uma lista de documentos que você pode trazer e uma confirma
 def load_data():
     try:
         logger.info("Iniciando carregamento de dados")
-        file_path = os.path.join('data', 'treinamento_ia', 'csv', 'costumers.csv')
+
+        csv_dir = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'csv')
+        os.makedirs(csv_dir, exist_ok=True)
+        file_path = os.path.join(csv_dir, 'customers.csv')
         
         # Carregar interações únicas
         interaction_data = load_interactions()
