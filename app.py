@@ -1140,11 +1140,16 @@ def load_data():
         }
         
         # Limpar e converter dados
-        df['Idade'] = pd.to_numeric(df['Idade'], errors='coerce')
-        df['Renda Mensal'] = df['Renda Mensal'].str.replace('.', '').str.replace(',', '.').astype(float)
+        df["Idade"] = pd.to_numeric(df["Idade"], errors="coerce")
+        df[" Renda Bruta Mensal"] = (
+            df[" Renda Bruta Mensal"]
+            .str.replace(".", "")
+            .str.replace(",", ".")
+            .astype(float)
+        )
         
         # Normalizar strings para UTF-8
-        text_columns = ['Nome', 'Estado Civil', 'Tipo de Trabalho', 'Filhos Menores', 'Experiência > 3 anos']
+        text_columns = ['Nome', 'Estado Civil', 'Tipo de Trabalho', 'Filhos Menores?', 'Experiência > 3 anos?']
         for col in text_columns:
             df[col] = df[col].astype(str).apply(lambda x: x.strip())
         
