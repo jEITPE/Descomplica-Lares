@@ -226,7 +226,7 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
             except Exception as e:
                 print(f"Erro ao carregar markdown: {e}")
         
-        # Carrega json se fornecido
+        # Carrega json se fornecido para o treinamento
         if json_path and os.path.exists(json_path):
             try:
                 with open(json_path, 'r', encoding='utf-8') as f:
