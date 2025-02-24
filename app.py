@@ -137,7 +137,7 @@ except Exception as e:
 prompt_lola = PromptTemplate(
     input_variables=["message", "markdown_instrucoes", "configuracoes", "historico"],
     template="""
-    Você é a Lora, assistente virtual da imobiliária Descomplica Lares. 
+    Você é a Lare, assistente virtual da imobiliária Descomplica Lares. 
     Você tem uma abordagem simples e clara. Textos muito grande não agradam os seus clientes, então seja o mais direta possível.
     Responda somente com base nas instruções fornecidas. Se a pergunta for fora do escopo, diga algo como: 
     "Mil perdões, eu não tenho certeza da resposta! 😓\nSe precisar marcar uma conversa com um corretor, digite *atendimento*"
@@ -227,40 +227,51 @@ intention_chain = LLMChain(llm=llm, prompt=prompt_rubens)
 prompt_fallback = PromptTemplate(
     input_variables=["message", "markdown_instrucoes", "configuracoes", "historico", "current_stage", "last_question"],
     template="""
-    Você é um assistente que identifica quando um cliente desvia do fluxo principal do questionário.
-    
-    Estado atual do cliente: {current_stage}
-    Última pergunta feita ao cliente: {last_question}
+    Você é um assistente especializado em identificar quando um usuário está respondendo corretamente a um questionário ou desviando do fluxo, seja fazendo perguntas, expressando dúvidas ou mudando de assunto. Sua função é analisar a interação do usuário e decidir se ele está seguindo o fluxo normal do questionário ou se precisa de assistência.
 
-    REGRAS ESTRITAS:
-    1. Se o cliente estiver em qualquer etapa do questionário, analise se a mensagem é uma resposta à última pergunta feita
-    2. Se a mensagem parecer ser uma resposta à pergunta anterior, responda com "CONTINUE_FLOW"
-    3. Se for uma nova pergunta ou dúvida, responda com "FALLBACK"
+O assistente recebe três informações principais: o estado atual do cliente no questionário {current_stage}, a última pergunta feita ao cliente {last_question} e a mensagem recebida {message}. A análise da mensagem deve seguir regras rígidas para determinar se a resposta do usuário está de acordo com a pergunta anterior ou se ele está desviando do fluxo.
 
-    EXEMPLOS DE ANÁLISE:
-    - Se última pergunta foi sobre idade e cliente responde com números = CONTINUE_FLOW
-    - Se última pergunta foi sobre CPF e cliente faz uma pergunta = FALLBACK
-    - Se cliente responde algo totalmente fora do contexto = FALLBACK
+Se a mensagem do usuário for uma resposta válida à última pergunta feita, o assistente deve responder com "CONTINUE_FLOW", permitindo que o questionário prossiga normalmente. Caso a mensagem indique uma dúvida, uma nova pergunta, um pedido de esclarecimento ou qualquer outro tipo de desvio, o assistente deve responder com "FALLBACK", sinalizando que a interação do usuário não está alinhada com a pergunta atual e que pode ser necessário intervir para manter o fluxo correto.
 
-    QUANDO INTERVIR (FALLBACK):
-    - Perguntas urgentes sobre o processo
-    - Dúvidas que podem impedir o cliente de continuar
-    - Mensagens que claramente não são respostas à pergunta atual
-    - Sempre que tiver dúvidas, perguntar ao cliente se ele quer continuar o questionario
-    - Sempre que tiver interrogação na mensagem
+Para classificar corretamente as mensagens, o assistente deve seguir as seguintes regras estritas:
 
-    QUANDO NÃO INTERVIR (CONTINUE_FLOW):
-    - Respostas que parecem corresponder à pergunta atual
-    - Números quando perguntado sobre idade
-    - Formato de CPF quando perguntado sobre CPF
-    - Respostas simples como "sim", "não" quando apropriado
-    - Respostas que parecem corresponder à pergunta atual
-    - Respostas validas para perguntas do questionario
-    - Respostas de estado civil
-    - Registrado ou Autonomo
-    - Quando falar de renda bruta
-    - Quando falar um Nome
-    - Quando falar um número que é valida pra ser uma idade de alguém
+Se a mensagem do usuário for uma resposta direta à última pergunta, mesmo que simples ou incompleta, ela deve ser classificada como "CONTINUE_FLOW". Isso inclui respostas numéricas quando a pergunta esperava um número (como idade, CPF, valor de renda), respostas curtas de "sim" ou "não" quando a pergunta foi binária, e respostas com palavras-chave esperadas (como "casado", "solteiro", "autônomo", "registrado" para perguntas sobre estado civil e trabalho).
+
+Se a mensagem do usuário contiver uma interrogação (?), ela deve ser classificada como "FALLBACK", pois indica que o usuário está perguntando algo novo ou expressando uma dúvida.
+
+Se a mensagem começar com palavras interrogativas como "qual", "como", "onde", "quando", "por que" ou "quem", deve ser classificada como "FALLBACK", pois indica que o usuário está fazendo uma nova pergunta em vez de responder ao questionário.
+
+Se a mensagem do usuário expressar dúvida de forma explícita, como "não entendi", "pode explicar?", "não sei o que responder" ou algo semelhante, ela deve ser classificada como "FALLBACK", pois indica que o usuário precisa de esclarecimento antes de continuar.
+
+Se a mensagem pedir informações adicionais ou esclarecimentos sobre o processo, deve ser classificada como "FALLBACK", pois isso significa que o usuário não está respondendo diretamente à última pergunta, mas sim buscando entender melhor o contexto.
+
+Se a mensagem do usuário mencionar um assunto não relacionado à última pergunta feita, ela deve ser classificada como "FALLBACK". Por exemplo, se a última pergunta foi sobre idade e o usuário responde mencionando dinheiro ou renda, a resposta está fora de contexto e deve ser tratada como um desvio do fluxo.
+
+Se a resposta do usuário for uma saudação ou agradecimento simples, como "ok", "obrigado" ou "tudo bem", ela deve ser classificada como "CONTINUE_FLOW", pois não altera o fluxo do questionário.
+
+Se a resposta for um valor numérico esperado, como um CPF quando perguntado sobre CPF, uma idade válida quando perguntado sobre idade, um horário quando perguntado sobre horário de visita ou um valor monetário quando perguntado sobre renda, a resposta deve ser classificada como "CONTINUE_FLOW".
+
+Se a mensagem do usuário menciona "registrado" ou "autônomo" ao responder sobre trabalho, deve ser classificada como "CONTINUE_FLOW", pois corresponde às opções esperadas.
+
+Se houver qualquer incerteza sobre se a mensagem do usuário é uma resposta válida ou não, o assistente deve classificar como "FALLBACK", garantindo que o usuário receba assistência caso precise.
+
+Exemplos práticos de classificação:
+
+Se a pergunta for "Qual é a sua idade?" e o usuário responder "25", "35 anos" ou "tenho 30", a resposta deve ser "CONTINUE_FLOW", pois são respostas diretas à pergunta. Porém, se a resposta for "Qual idade mínima?", "E se eu tiver menos?", ou "Por que precisa da idade?", deve ser "FALLBACK", pois o usuário está fazendo uma pergunta ou expressando dúvida.
+
+Se a pergunta for "Qual é o seu CPF?" e o usuário responder "123.456.789-10" ou "Não tenho aqui agora", deve ser "CONTINUE_FLOW", pois são respostas válidas. No entanto, se o usuário perguntar "Pode ser o CPF do meu marido?" ou "Como faço para tirar um CPF?", deve ser "FALLBACK", pois ele está desviando do questionário.
+
+Se a pergunta for "Qual é a sua renda bruta mensal?" e o usuário responder "4500,00", "Ganho 3000 reais" ou "5000", deve ser "CONTINUE_FLOW", pois são respostas esperadas. No entanto, se o usuário perguntar "O que é renda bruta?", "Pode incluir hora extra?" ou "Precisa de comprovante?", deve ser "FALLBACK", pois ele está expressando dúvida ou pedindo esclarecimentos.
+
+Se a pergunta for "Você tem filhos?" e o usuário responder "Sim, tenho 2" ou "Não", deve ser "CONTINUE_FLOW". No entanto, se a resposta for "Preciso informar quantos?" ou "Qual a idade mínima?", deve ser "FALLBACK", pois não responde diretamente à pergunta.
+
+Se a pergunta for "Qual o seu nome?" e o usuário responder "João", "Maria", "Pedro" ou qualquer nome válido, a resposta deve ser "CONTINUE_FLOW". Porém, se o usuário perguntar "Qual nome?" ou "Preciso informar nome completo?", a resposta deve ser "FALLBACK", pois indica dúvida.
+
+Se a pergunta for "Qual o seu horário de visita?" e o usuário responder "10:30" ou "15:45", deve ser "CONTINUE_FLOW", pois são horários válidos. Porém, se o usuário perguntar "Que horas vocês estão atendendo?" ou "Pode ser qualquer horário?", deve ser "FALLBACK", pois está pedindo informações adicionais.
+
+Caso a resposta não tenha certeza se é válida ou não, o assistente deve sempre escolher "FALLBACK", garantindo que o usuário receba suporte antes de continuar o questionário.
+
+No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a resposta seja válida ou "FALLBACK" caso o usuário tenha dúvidas ou esteja desviando do fluxo esperado.
 
 
     ### Mensagem do cliente:
@@ -921,7 +932,6 @@ Sua privacidade é nossa prioridade, e todos os dados enviados são armazenados 
                 to=from_whatsapp_number,
                 body="*Antes temos alguns pontos importantes a salientar...*\n\n  • Reunião será _online_, como videochamada 🖥\n  • Você falará com um de nossos corretores, *já tenha alguns documentos em mãos, para possíveis verificações! 😎*"
             )
-
             estado_cliente["etapa"] = "finalizado_tudo"
             sleep(2)
 
