@@ -81,7 +81,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 lola_md = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'lola.md')
 lola_json = os.path.join(BASE_DIR, 'data', 'treinamento_ia', 'lola.json')
-csv_file = os.path.join(BASE_DIR, 'data', 'csv', 'customers.csv')
+
+csv_dir = os.path.join(BASE_DIR, 'data', 'csv')
+os.makedirs(csv_dir, exist_ok=True)
+csv_file = os.path.abspath(os.path.join(csv_dir, 'customers.csv'))
 
 # Configuração do Langchain
 llm = ChatOpenAI(
