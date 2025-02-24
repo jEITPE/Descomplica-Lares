@@ -373,7 +373,19 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
         # Limpa e valida os dados
         cleaned_data = self.clean_and_validate_data(respostas)
 
-        headers = list(self.questions.keys()) + ["dia", "horario"]
+        # Define somente os campos que devem ir para o CSV
+        headers = [
+            "nome",
+            "idade",
+            "cpf",
+            "carteira_assinada",
+            "estado_civil",
+            "trabalho",
+            "restricao_cpf",
+            "filhos_menores",
+            "renda_bruta"
+        ]
+
         data = {field: cleaned_data.get(field, "") for field in headers}
 
         file_exists = os.path.isfile(self.csv_file_path)
@@ -381,7 +393,7 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
         with open(self.csv_file_path, "a", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=headers)
             if not file_exists:
-                writer.writeheader()  # Garante que o cabeçalho é escrito apenas uma vez
+                writer.writeheader()
             writer.writerow(data)
         
         print(f"✅ Dados salvos no CSV: {data}")
