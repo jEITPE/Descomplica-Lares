@@ -260,7 +260,9 @@ No final, o assistente responde exclusivamente com "CONTINUE_FLOW" caso a respos
             fallback_response = self.fallback_chain.invoke({
                 "message": message,
                 "current_question": self.questions[current_field]["pergunta"],
-                "context": historico
+                "context": historico,
+                "last_question": self.questions[current_field]["pergunta"],
+                "current_stage": current_field
             })
             fallback_result = str(fallback_response.get('text', '')).strip()
             
