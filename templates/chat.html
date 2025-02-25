@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Descomplica Lares</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #8339EA;
+            --secondary-color: #FDBB0C;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            height: 100vh;
+        }
+
+        .chat-container {
+            height: calc(100vh - 2rem);
+            margin: 1rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .contacts-list {
+            height: 100%;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .contact-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .contact-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .contact-item.active {
+            background-color: #f0f0f0;
+        }
+
+        .chat-area {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 0 10px 0 0;
+        }
+
+        .messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23f0f2f5"/><path d="M0 0h200v200H0z" fill="%23f8f9fa" fill-opacity="0.4"/></svg>');
+        }
+
+        .message {
+            max-width: 70%;
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .message.received {
+            background-color: white;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+        }
+
+        .message.sent {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+            border-top-right-radius: 0;
+        }
+
+        .message-input {
+            padding: 1rem;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 0.25rem;
+        }
+
+        .search-box {
+            padding: 1rem;
+            background-color: var(--primary-color);
+            border-radius: 10px 0 0 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 20px;
+            background-color: white;
+        }
+
+        .btn-send {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+
+        .btn-send:hover {
+            background-color: #6c2dc3;
+        }
+
+        .status-badge {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-online {
+            background-color: #4CAF50;
+        }
+
+        .status-offline {
+            background-color: #9e9e9e;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row chat-container">
+            <!-- Contacts List -->
+            <div class="col-md-4 col-lg-3 p-0 contacts-list">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="Pesquisar contatos...">
+                </div>
+                <div class="contacts" id="contactsList">
+                    <!-- Contacts will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="col-md-8 col-lg-9 p-0">
+                <div class="chat-area">
+                    <div class="chat-header">
+                        <div class="d-flex align-items-center">
+                            <div class="status-badge status-online"></div>
+                            <h5 class="mb-0" id="currentContact">Selecione um contato</h5>
+                        </div>
+                    </div>
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                    <div class="message-input">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="messageInput"
+                                placeholder="Digite sua mensagem...">
+                            <button class="btn btn-send" type="button" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentContact = null;
+        let contacts = [];
+        let messages = {};
+
+        // Fetch contacts and messages
+        function loadContacts() {
+            fetch('/get_contacts')
+                .then(response => response.json())
+                .then(data => {
+                    contacts = data;
+                    renderContacts();
+                });
+        }
+
+        function loadMessages(contactId) {
+            fetch(`/get_messages/${contactId}`)
+                .then(response => response.json())
+                .then(data => {
+                    messages[contactId] = data;
+                    if (currentContact === contactId) {
+                        renderMessages(contactId);
+                    }
+                });
+        }
+
+        function renderContacts() {
+            const contactsList = document.getElementById('contactsList');
+            contactsList.innerHTML = contacts.map(contact => `
+                <div class="contact-item ${currentContact === contact.id ? 'active' : ''}" 
+                     onclick="selectContact('${contact.id}')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">${contact.number}</h6>
+                            <small class="text-muted">${contact.last_message || ''}</small>
+                        </div>
+                        <small class="text-muted">${contact.last_time || ''}</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderMessages(contactId) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = messages[contactId].map(msg => `
+                <div class="message ${msg.sent ? 'sent' : 'received'}">
+                    ${msg.content}
+                    <div class="message-time">${msg.time}</div>
+                </div>
+            `).join('');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function selectContact(contactId) {
+            currentContact = contactId;
+            document.getElementById('currentContact').textContent =
+                contacts.find(c => c.id === contactId).number;
+            renderContacts();
+            if (messages[contactId]) {
+                renderMessages(contactId);
+            } else {
+                loadMessages(contactId);
+            }
+        }
+
+        function sendMessage() {
+            if (!currentContact) return;
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            fetch('/send_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contact_id: currentContact,
+                    message: message
+                }),
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        input.value = '';
+                        loadMessages(currentContact);
+                    }
+                });
+        }
+
+        // Initialize
+        loadContacts();
+
+        // Handle enter key in message input
+        document.getElementById('messageInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Handle search
+        document.querySelector('.search-input').addEventListener('input', function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredContacts = contacts.filter(contact =>
+                contact.number.toLowerCase().includes(searchTerm)
+            );
+            const contactsList = document.getElementById('contactsList');
+            contactsList.innerHTML = filteredContacts.map(contact => `
+                <div class="contact-item ${currentContact === contact.id ? 'active' : ''}" 
+                     onclick="selectContact('${contact.id}')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">${contact.number}</h6>
+                            <small class="text-muted">${contact.last_message || ''}</small>
+                        </div>
+                        <small class="text-muted">${contact.last_time || ''}</small>
+                    </div>
+                </div>
+            `).join('');
+        });
+    </script>
+</body>
+
+</html>

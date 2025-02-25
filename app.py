@@ -1660,5 +1660,72 @@ scheduler.start()
 def index():
     return "Funcionando 2025!"
 
+@app.route('/chat')
+def chat():
+    return render_template('chat.html')
+
+@app.route('/get_contacts')
+def get_contacts():
+    try:
+        # Load interactions.json to get all contacts
+        interaction_data = load_interactions()
+        contacts = []
+        
+        for number, data in interaction_data.get("interactions", {}).items():
+            contact = {
+                'id': number,
+                'number': number,
+                'last_message': '',  # You could store last message in interactions.json
+                'last_time': data['last_interaction'].split('T')[0],  # Format date
+                'status': 'online' if (datetime.now() - datetime.fromisoformat(data['last_interaction'])).total_seconds() < 3600 else 'offline'
+            }
+            contacts.append(contact)
+        
+        return jsonify(contacts)
+    except Exception as e:
+        logger.error(f"Error loading contacts: {str(e)}")
+        return jsonify([])
+
+@app.route('/get_messages/<contact_id>')
+def get_messages(contact_id):
+    try:
+        # Here you would load messages from your storage
+        # For now, we'll return some dummy data
+        messages = [
+            {
+                'content': 'Última mensagem enviada',
+                'time': '10:30',
+                'sent': True
+            },
+            {
+                'content': 'Última mensagem recebida',
+                'time': '10:31',
+                'sent': False
+            }
+        ]
+        return jsonify(messages)
+    except Exception as e:
+        logger.error(f"Error loading messages: {str(e)}")
+        return jsonify([])
+
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    try:
+        data = request.json
+        contact_id = data.get('contact_id')
+        message = data.get('message')
+        
+        # Here you would save the message and send it via Twilio
+        client.messages.create(
+            from_='whatsapp:+554188277077',
+            to=contact_id,
+            body=message
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error sending message: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ != "__main__":
     gunicorn_app = app
