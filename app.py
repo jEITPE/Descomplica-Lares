@@ -727,6 +727,52 @@ class APIMonitor:
         except Exception as e:
             logger.error(f"Erro ao salvar dados de uso: {str(e)}")
 
+    def get_current_usage(self):
+        """Retorna uso atual com dados formatados"""
+        today = datetime.now().strftime('%Y-%m-%d')
+        month = datetime.now().strftime('%Y-%m')
+        
+        daily = self.daily_usage.get(today, {
+            'cost': 0,
+            'tokens': 0,
+            'calls': 0,
+            'twilio_cost': 0,
+            'messages': 0
+        })
+        
+        monthly = self.monthly_usage.get(month, {
+            'cost': 0,
+            'tokens': 0,
+            'calls': 0,
+            'twilio_cost': 0,
+            'messages': 0
+        })
+        
+        return {
+            'daily': {
+                'openai': {
+                    'cost': f"${daily.get('cost', 0):.2f}",
+                    'tokens': f"{daily.get('tokens', 0):,}",
+                    'calls': daily.get('calls', 0)
+                },
+                'twilio': {
+                    'cost': f"${daily.get('twilio_cost', 0):.2f}",
+                    'messages': daily.get('messages', 0)
+                }
+            },
+            'monthly': {
+                'openai': {
+                    'cost': f"${monthly.get('cost', 0):.2f}",
+                    'tokens': f"{monthly.get('tokens', 0):,}",
+                    'calls': monthly.get('calls', 0)
+                },
+                'twilio': {
+                    'cost': f"${monthly.get('twilio_cost', 0):.2f}",
+                    'messages': monthly.get('messages', 0)
+                }
+            }
+        }
+
 # Inicializa o monitor de API
 api_monitor = APIMonitor()
 
