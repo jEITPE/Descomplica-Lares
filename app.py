@@ -317,16 +317,31 @@ scheduler = BackgroundScheduler()
 
 # Função para verificar clientes inativos
 def limpar_historico_antigo():
+    """Limpa histórico e reseta interações após 12 horas"""
     tempo_atual = time.time()
-    tempo_limite = 24 * 60 * 60  # 24 horas
+    tempo_limite = 12 * 60 * 60  # 12 horas
     
     for numero in list(historico_clientes.keys()):
         if tempo_atual - historico_clientes[numero]["ultima_interacao"] > tempo_limite:
             del historico_clientes[numero]
-            logger.info(f"Histórico do cliente {numero} removido após 24h de inatividade")
+            logger.info(f"Histórico do cliente {numero} removido após 12h de inatividade")
+
+def reset_monthly_interactions():
+    """Reseta todas as interações no dia 25 de cada mês"""
+    try:
+        data_dir = os.path.join(BASE_DIR, 'data')
+        interaction_file = os.path.join(data_dir, 'interactions.json')
+        
+        if os.path.exists(interaction_file):
+            with open(interaction_file, 'w', encoding='utf-8') as f:
+                json.dump({"interactions": {}}, f, indent=4)
+            logger.info("Interações resetadas com sucesso - reset mensal")
+    except Exception as e:
+        logger.error(f"Erro ao resetar interações: {str(e)}")
 
 # Adicione ao scheduler
-scheduler.add_job(limpar_historico_antigo, 'interval', hours=24)
+scheduler.add_job(limpar_historico_antigo, 'interval', hours=1)  # Verifica a cada hora
+scheduler.add_job(reset_monthly_interactions, 'cron', day='25', hour='0', minute='0')
 
 def salvar_resposta(estado_cliente, campo, valor):
     if "respostas" not in estado_cliente:
@@ -566,37 +581,48 @@ def load_interactions():
 
 def save_interaction(phone_number):
     try:
-        # Create data directory if it doesn't exist
         data_dir = os.path.join(BASE_DIR, 'data')
         os.makedirs(data_dir, exist_ok=True)
         
         interaction_file = os.path.join(data_dir, 'interactions.json')
         current_time = datetime.now().isoformat()
         
-        # Load existing data or create new structure
+        # Carregar dados existentes ou criar nova estrutura
         if os.path.exists(interaction_file):
             with open(interaction_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         else:
             data = {"interactions": {}}
         
-        # Add or update interaction
-        if phone_number not in data["interactions"]:
+        # Verificar se passou 12 horas desde a última interação
+        if phone_number in data["interactions"]:
+            last_interaction = datetime.fromisoformat(data["interactions"][phone_number]["last_interaction"])
+            hours_passed = (datetime.now() - last_interaction).total_seconds() / 3600
+            
+            if hours_passed >= 12:
+                # Se passou 12 horas, considera como nova interação
+                data["interactions"][phone_number] = {
+                    "first_interaction": current_time,
+                    "last_interaction": current_time,
+                    "total_interactions": data["interactions"][phone_number].get("total_interactions", 0) + 1
+                }
+            else:
+                # Atualiza apenas o timestamp da última interação
+                data["interactions"][phone_number]["last_interaction"] = current_time
+        else:
+            # Primeira interação do número
             data["interactions"][phone_number] = {
                 "first_interaction": current_time,
                 "last_interaction": current_time,
                 "total_interactions": 1
             }
-        else:
-            data["interactions"][phone_number]["last_interaction"] = current_time
-            data["interactions"][phone_number]["total_interactions"] = \
-                data["interactions"][phone_number].get("total_interactions", 0) + 1
         
-        # Save updated data
+        # Salvar dados atualizados
         with open(interaction_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-            
-        return len(data["interactions"])
+        
+        # Retorna o total de interações
+        return sum(interaction["total_interactions"] for interaction in data["interactions"].values())
         
     except Exception as e:
         logger.error(f"Erro ao salvar interação: {str(e)}")
@@ -608,79 +634,96 @@ class APIMonitor:
         self.openai_costs = {
             'gpt-3.5-turbo': 0.0015,  # Custo por 1K tokens
         }
-        self.daily_usage = {}
-        self.monthly_usage = {}
-        self.last_reset = datetime.now()
+        self.data_dir = os.path.join(BASE_DIR, 'data')
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.usage_file = os.path.join(self.data_dir, 'api_usage.json')
+        self.load_usage_data()
+    
+    def load_usage_data(self):
+        """Carrega dados de uso ou inicializa se não existir"""
+        try:
+            if os.path.exists(self.usage_file):
+                with open(self.usage_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.daily_usage = data.get('daily_usage', {})
+                    self.monthly_usage = data.get('monthly_usage', {})
+            else:
+                self.daily_usage = {}
+                self.monthly_usage = {}
+        except Exception as e:
+            logger.error(f"Erro ao carregar dados de uso: {str(e)}")
+            self.daily_usage = {}
+            self.monthly_usage = {}
     
     def track_openai_usage(self, model, tokens_used):
-        """Registra uso da API OpenAI"""
-        today = datetime.now().strftime('%Y-%m-%d')
-        month = datetime.now().strftime('%Y-%m')
+        try:
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            
+            cost = (tokens_used / 1000) * self.openai_costs.get(model, 0)
+            
+            # Atualiza uso diário
+            if today not in self.daily_usage:
+                self.daily_usage[today] = {'cost': 0, 'tokens': 0, 'calls': 0}
+            self.daily_usage[today]['cost'] += cost
+            self.daily_usage[today]['tokens'] += tokens_used
+            self.daily_usage[today]['calls'] += 1
+            
+            # Atualiza uso mensal
+            if month not in self.monthly_usage:
+                self.monthly_usage[month] = {'cost': 0, 'tokens': 0, 'calls': 0}
+            self.monthly_usage[month]['cost'] += cost
+            self.monthly_usage[month]['tokens'] += tokens_used
+            self.monthly_usage[month]['calls'] += 1
+            
+            # Salva dados atualizados
+            self.save_usage_data()
+            
+            # Alerta se ultrapassar limites
+            if self.monthly_usage[month]['cost'] > 50:
+                logger.warning(f"ALERTA: Custo mensal OpenAI > $50 ({self.monthly_usage[month]['cost']:.2f})")
+                
+        except Exception as e:
+            logger.error(f"Erro ao registrar uso da OpenAI: {str(e)}")
 
-        logger.info(f"[DEBUG] track_openai_usage chamado com {tokens_used} tokens.")
-        
-        cost = (tokens_used / 1000) * self.openai_costs.get(model, 0)
-        
-        # Atualiza uso diário
-        if today not in self.daily_usage:
-            self.daily_usage[today] = {'cost': 0, 'tokens': 0, 'calls': 0}
-        self.daily_usage[today]['cost'] += cost
-        self.daily_usage[today]['tokens'] += tokens_used
-        self.daily_usage[today]['calls'] += 1
-        
-        # Atualiza uso mensal
-        if month not in self.monthly_usage:
-            self.monthly_usage[month] = {'cost': 0, 'tokens': 0, 'calls': 0}
-        self.monthly_usage[month]['cost'] += cost
-        self.monthly_usage[month]['tokens'] += tokens_used
-        self.monthly_usage[month]['calls'] += 1
-        
-        # Alerta se ultrapassar limites
-        if self.monthly_usage[month]['cost'] > 50:  # Alerta se custo mensal > $50
-            logger.warning(f"ALERTA DE CUSTO: Uso mensal da OpenAI ultrapassou $50 ({self.monthly_usage[month]['cost']:.2f})")
-    
     def track_twilio_message(self, message_type='text'):
-        """Registra uso da API Twilio"""
-        today = datetime.now().strftime('%Y-%m-%d')
-        month = datetime.now().strftime('%Y-%m')
-        
-        # Custo aproximado por mensagem
-        cost = 0.005  # $0.005 por mensagem
-        
-        if today not in self.daily_usage:
-            self.daily_usage[today] = {'twilio_cost': 0, 'messages': 0}
-        self.daily_usage[today]['twilio_cost'] += cost
-        self.daily_usage[today]['messages'] += 1
-        
-        if month not in self.monthly_usage:
-            self.monthly_usage[month] = {'twilio_cost': 0, 'messages': 0}
-        self.monthly_usage[month]['twilio_cost'] += cost
-        self.monthly_usage[month]['messages'] += 1
-        
-        # Alerta se ultrapassar limites
-        if self.monthly_usage[month]['messages'] > 1000:  # Alerta se mais de 1000 mensagens/mês
-            logger.warning(f"ALERTA DE USO: Número de mensagens Twilio ultrapassou 1000 ({self.monthly_usage[month]['messages']})")
-    
-    def get_current_usage(self):
-        """Retorna uso atual"""
-        today = datetime.now().strftime('%Y-%m-%d')
-        month = datetime.now().strftime('%Y-%m')
-        
-        return {
-            'daily': self.daily_usage.get(today, {}),
-            'monthly': self.monthly_usage.get(month, {}),
-        }
-    
+        try:
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            
+            cost = 0.005  # $0.005 por mensagem
+            
+            # Atualiza uso diário
+            if today not in self.daily_usage:
+                self.daily_usage[today] = {'twilio_cost': 0, 'messages': 0}
+            self.daily_usage[today]['twilio_cost'] += cost
+            self.daily_usage[today]['messages'] += 1
+            
+            # Atualiza uso mensal
+            if month not in self.monthly_usage:
+                self.monthly_usage[month] = {'twilio_cost': 0, 'messages': 0}
+            self.monthly_usage[month]['twilio_cost'] += cost
+            self.monthly_usage[month]['messages'] += 1
+            
+            # Salva dados atualizados
+            self.save_usage_data()
+            
+            # Alerta se ultrapassar limites
+            if self.monthly_usage[month]['messages'] > 1000:
+                logger.warning(f"ALERTA: Mensagens Twilio > 1000 ({self.monthly_usage[month]['messages']})")
+                
+        except Exception as e:
+            logger.error(f"Erro ao registrar mensagem Twilio: {str(e)}")
+
     def save_usage_data(self):
         """Salva dados de uso em arquivo"""
         try:
-            usage_file = os.path.join('data', 'api_usage.json')
-            with open(usage_file, 'w') as f:
+            with open(self.usage_file, 'w', encoding='utf-8') as f:
                 json.dump({
                     'daily_usage': self.daily_usage,
                     'monthly_usage': self.monthly_usage,
                     'last_update': datetime.now().isoformat()
-                }, f, indent=4)
+                }, f, indent=4, ensure_ascii=False)
         except Exception as e:
             logger.error(f"Erro ao salvar dados de uso: {str(e)}")
 
